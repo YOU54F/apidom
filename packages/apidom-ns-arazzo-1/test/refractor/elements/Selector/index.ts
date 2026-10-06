@@ -10,6 +10,13 @@ import {
 describe('refractor', function () {
   context('elements', function () {
     context('SelectorElement', function () {
+      specify('should preserve a missing required type for validation', function () {
+        const el = SelectorElement.refract({ context: '$response.body', selector: '/id' });
+
+        expect(isSelectorElement(el)).to.be.true;
+        expect(el.type).to.be.undefined;
+      });
+
       specify('should refract to semantic ApiDOM tree', function () {
         const el = SelectorElement.refract({
           context: '$response.body',

@@ -322,6 +322,24 @@ const arazzoSelectorIncomplete = (element: Element): boolean => {
   return element.hasKey('context') !== element.hasKey('selector');
 };
 
+const isXmlMediaType = (mediaType: unknown): boolean =>
+  typeof mediaType === 'string' && /^(application|text)\/([\w.-]+\+)?xml\b/i.test(mediaType.trim());
+
+/**
+ * Infer `xpath` only for a known XML context, not from an unrelated destination payload.
+ */
+const arazzoInferredSelectorType = (selector: Element): string | undefined => {
+  if (!isObject(selector)) return undefined;
+  const context = toValue(selector.get('context'));
+  if (isXmlMediaType(context)) return 'xpath';
+  if (context !== '$request.body') return undefined;
+  const requestBody = enclosingArazzoElement(selector, 'requestBody');
+  if (requestBody && isObject(requestBody)) {
+    if (isXmlMediaType(toValue(requestBody.get('contentType')))) return 'xpath';
+  }
+  return undefined;
+};
+
 // eslint-disable-next-line import/prefer-default-export
 export const standardLinterfunctions: FunctionItem[] = [
   {
@@ -1455,6 +1473,13 @@ export const standardLinterfunctions: FunctionItem[] = [
     },
   },
   {
+    functionName: 'arazzoSelectorTypePresent',
+    function: (element: Element): boolean =>
+      !isObject(element) ||
+      element.hasKey('type') ||
+      arazzoInferredSelectorType(element) !== undefined,
+  },
+  {
     functionName: 'arazzoSelectorTypeValid',
     function: (element: Element): boolean => {
       if (isObject(element)) return true;
@@ -1571,7 +1596,8 @@ export const standardLinterfunctions: FunctionItem[] = [
     functionName: 'arazzoKnownVersion',
     function: (element: Element): boolean => {
       const value = toValue(element);
-      return typeof value !== 'string' || KNOWN_ARAZZO_VERSIONS.includes(value);
+      // a non-string (e.g. YAML `1.0`) is not a version string, so it is not a known version
+      return typeof value === 'string' && KNOWN_ARAZZO_VERSIONS.includes(value);
     },
   },
   {

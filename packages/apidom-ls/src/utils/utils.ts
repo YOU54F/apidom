@@ -1056,6 +1056,45 @@ export async function findNamespace(
     };
   }
 
+  // Arazzo by shape: a top-level `arazzo` field next to `sourceDescriptions`/`workflows` whose value
+  // is not a 1.x.y version (missing quotes, `2.0.0`, `latest`, ...). The adapters' version-based
+  // detection above does not match these, but the author clearly wrote an Arazzo document, so
+  // it must still get Arazzo diagnostics (e.g. the unknown version warning).
+  const arazzoByShape = async (
+    adapter: typeof adapterJson | typeof adapterYaml,
+  ): Promise<boolean> => {
+    if (!text.includes('arazzo') || !(await adapter.detect(text))) return false;
+    try {
+      const parsed = await adapter.parse(text);
+      const root = parsed.result;
+      return (
+        isObjectElement(root) &&
+        root.hasKey('arazzo') &&
+        (root.hasKey('sourceDescriptions') || root.hasKey('workflows'))
+      );
+    } catch {
+      return false;
+    }
+  };
+  if (await arazzoByShape(adapterJson)) {
+    const version = '1.1.0';
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'JSON',
+      mediaType: arazzo1AdapterJson.mediaTypes.findBy(version, 'json'),
+    };
+  }
+  if (await arazzoByShape(adapterYaml)) {
+    const version = '1.1.0';
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'YAML',
+      mediaType: arazzo1AdapterYaml.mediaTypes.findBy(version, 'yaml'),
+    };
+  }
+
   if (await adapterJson.detect(text)) {
     return defaultContentLanguage
       ? {

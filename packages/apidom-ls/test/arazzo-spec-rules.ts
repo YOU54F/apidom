@@ -19,8 +19,9 @@ import { logPerformance, logLevel } from './test-utils.ts';
  *
  * Resolving `operationId`, `operationPath`, `channelPath` and `workflowId` against the loaded
  * source documents is covered separately (test/arazzo-sources.ts); it only reports when a source
- * document has been supplied. A missing or malformed `arazzo` field cannot be reported: without a
- * 1.x.y version the document is not recognised as an Arazzo document, so no Arazzo rule runs.
+ * document has been supplied. A missing `arazzo` field cannot be reported (without it the document
+ * is not recognised as Arazzo); a malformed or unknown value is detected by shape (`arazzo` plus
+ * `sourceDescriptions` / `workflows`) and reported as an unknown-version warning.
  */
 
 interface DocOptions {
@@ -197,7 +198,10 @@ rule(
 rule(
   'Selector Object (1.1): context is required',
   C.ARAZZO1_SELECTOR_INCOMPLETE,
-  ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
+  ONE_STEP_WITH(
+    'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+    V11,
+  ),
   ONE_STEP_WITH('outputs:\n  o:\n    selector: /a', V11),
 );
 const COMP0 =
@@ -338,7 +342,10 @@ rule(
 rule(
   'Selector Object (1.1): selector is required',
   C.ARAZZO1_SELECTOR_INCOMPLETE,
-  ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
+  ONE_STEP_WITH(
+    'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+    V11,
+  ),
   ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body', V11),
 );
 const PR = (extra: string, o: DocOptions = {}) =>
@@ -521,13 +528,19 @@ rule(
 rule(
   'Step Object (1.1): outputs values are strings or Selector Objects',
   C.ARAZZO1_OUTPUTS_VALUE_TYPE,
-  ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
+  ONE_STEP_WITH(
+    'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+    V11,
+  ),
   ONE_STEP_WITH('outputs:\n  o: 5', V11),
 );
 rule(
   'Workflow Object (1.1): outputs values are strings or Selector Objects',
   C.ARAZZO1_OUTPUTS_VALUE_TYPE,
-  doc({ ver: '1.1.0', wf: 'outputs:\n  o:\n    context: $response.body\n    selector: /a' }),
+  doc({
+    ver: '1.1.0',
+    wf: 'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+  }),
   doc({ ver: '1.1.0', wf: 'outputs:\n  o: true' }),
 );
 rule(
@@ -912,7 +925,7 @@ rule(
   'Parameter Object (1.1): value Selector Object requires context and selector',
   C.ARAZZO1_SELECTOR_INCOMPLETE,
   ONE_STEP_WITH(
-    'parameters:\n  - name: p\n    in: query\n    value:\n      context: $response.body\n      selector: /a',
+    'parameters:\n  - name: p\n    in: query\n    value:\n      context: $response.body\n      selector: /a\n      type: jsonpath',
     V11,
   ),
   ONE_STEP_WITH(
@@ -924,7 +937,7 @@ rule(
   'Payload Replacement Object (1.1): value Selector Object requires context and selector',
   C.ARAZZO1_SELECTOR_INCOMPLETE,
   ONE_STEP_WITH(
-    'requestBody:\n  replacements:\n    - target: /a\n      value:\n        context: $response.body\n        selector: /b',
+    'requestBody:\n  replacements:\n    - target: /a\n      value:\n        context: $response.body\n        selector: /b\n        type: jsonpath',
     V11,
   ),
   ONE_STEP_WITH(
@@ -935,8 +948,47 @@ rule(
 rule(
   'Workflow Object (1.1): outputs Selector Object requires context and selector',
   C.ARAZZO1_SELECTOR_INCOMPLETE,
-  doc({ ...V11, wf: 'outputs:\n  o:\n    context: $response.body\n    selector: /a' }),
+  doc({
+    ...V11,
+    wf: 'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+  }),
   doc({ ...V11, wf: 'outputs:\n  o:\n    selector: /a' }),
+);
+rule(
+  'Selector Object (1.1): type is REQUIRED',
+  C.ARAZZO1_SELECTOR_FIELD_TYPE_REQUIRED,
+  ONE_STEP_WITH(
+    'outputs:\n  o:\n    context: $response.body\n    selector: /a\n    type: jsonpath',
+    V11,
+  ),
+  ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
+);
+rule(
+  'Selector Object (1.1): type is inferred as xpath for an XML request context',
+  C.ARAZZO1_SELECTOR_FIELD_TYPE_REQUIRED,
+  ONE_STEP_WITH(
+    'requestBody:\n  contentType: application/soap+xml\n  replacements:\n    - target: /a\n      value:\n        context: $request.body\n        selector: /b',
+    V11,
+  ),
+  ONE_STEP_WITH(
+    'requestBody:\n  contentType: application/soap+xml\n  replacements:\n    - target: /a\n      value:\n        context: $response.body\n        selector: /b',
+    V11,
+  ),
+);
+rule(
+  'Selector Object (1.1): XML media-type context defaults to xpath',
+  C.ARAZZO1_SELECTOR_FIELD_TYPE_REQUIRED,
+  ONE_STEP_WITH('outputs:\n  o:\n    context: application/soap+xml\n    selector: /a', V11),
+  ONE_STEP_WITH('outputs:\n  o:\n    context: application/json\n    selector: /a', V11),
+);
+rule(
+  'Payload Replacement Object (1.1): XML target defaults to xpath',
+  C.ARAZZO1_PAYLOAD_REPLACEMENT_FIELD_TARGET_SELECTOR_TYPE_ENUM,
+  ONE_STEP_WITH(
+    'requestBody:\n  contentType: application/xml\n  replacements:\n    - target: /Invoice/Header\n      value: updated',
+    V11,
+  ),
+  PR('targetSelectorType: invalid', V11),
 );
 rule(
   'Runtime expression: $self requires 1.1.0',
@@ -1019,17 +1071,53 @@ describe('apidom-ls-arazzo-spec-rules', function () {
   };
 
   let counter = 0;
-  const validate = async (text: string) => {
+  const validate = async (text: string, format = 'yaml') => {
     counter += 1;
     // a fresh uri per document: the language service caches by uri
     return languageService.doValidation(
-      TextDocument.create(`foo://bar/spec-rule-${counter}.yaml`, 'yaml', 0, text),
+      TextDocument.create(`foo://bar/spec-rule-${counter}.${format}`, format, 0, text),
       validationContext,
     );
   };
 
   after(function () {
     languageService.terminate();
+  });
+
+  describe('malformed arazzo version (detected by shape)', function () {
+    it('detects a malformed JSON version at the top level', async function () {
+      const text = JSON.stringify({ arazzo: 'latest', sourceDescriptions: [], workflows: [] });
+      const document = TextDocument.create('foo://bar/range.json', 'json', 0, text);
+      const offset = text.indexOf('"latest"');
+      assert.deepEqual(await validate(text, 'json'), [
+        {
+          range: {
+            start: document.positionAt(offset),
+            end: document.positionAt(offset + 8),
+          },
+          message:
+            'Unknown Arazzo version, supported versions are 1.0.0, 1.0.1 and 1.1.0; version specific rules are not applied',
+          severity: DiagnosticSeverity.Warning,
+          code: C.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_ARAZZO_VERSION_UNKNOWN,
+          source: 'apilint',
+        },
+      ]);
+    });
+    it('does not detect nested Arazzo fields in a generic JSON document', async function () {
+      const text = JSON.stringify({ example: { arazzo: 'latest', workflows: [] } });
+      assert.deepEqual(await validate(text, 'json'), []);
+    });
+    ['2.0.0', 'latest', '1.0', '"1.x"'].forEach((ver) => {
+      it(`warns about arazzo: ${ver}`, async function () {
+        this.timeout(10000);
+        const diagnostics = await validate(doc({ arazzo: ver }));
+        const d = diagnostics.find(
+          (x) => Number(x.code) === C.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_ARAZZO_VERSION_UNKNOWN,
+        );
+        assert.isDefined(d, JSON.stringify(diagnostics.map((x) => [x.code, x.message])));
+        assert.equal(d!.severity, DiagnosticSeverity.Warning);
+      });
+    });
   });
 
   rules.forEach(({ rule: name, code, valid, invalid }) => {

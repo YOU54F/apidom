@@ -395,6 +395,14 @@ const specLints: Record<string, LinterMeta[]> = {
     ...expressionLints('value'),
   ],
   selector: [
+    // REQUIRED by the 1.1.0 text; not reported when `xpath` is inferred from an XML payload
+    lint({
+      code: ApilintCodes.ARAZZO1_SELECTOR_FIELD_TYPE_REQUIRED,
+      message: "A Selector Object requires a 'type' (jsonpointer, jsonpath or xpath)",
+      linterFunction: 'arazzoSelectorTypePresent',
+      marker: 'key',
+      targetSpecs: ARAZZO11,
+    }),
     lint({
       code: ApilintCodes.ARAZZO1_SELECTOR_FIELD_TYPE_ENUM,
       message: "'type' must be one of jsonpointer, jsonpath, xpath or an Expression Type Object",
