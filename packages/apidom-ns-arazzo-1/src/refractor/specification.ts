@@ -221,6 +221,7 @@ const specification = {
         Reference: {
           $visitor: ReferenceVisitor,
           fixedFields: {
+            reference: Reference$RefVisitor,
             $ref: Reference$RefVisitor,
             value: { $ref: '#/visitors/value' },
           },

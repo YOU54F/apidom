@@ -10,6 +10,16 @@ class Reference extends ObjectElement {
     this.classes.push('arazzo-spec-reference');
   }
 
+  /** Reusable Object field per the spec: a runtime expression such as `$components.parameters.p`. */
+  get reference(): StringElement | undefined {
+    return this.get('reference');
+  }
+
+  set reference(reference: StringElement | undefined) {
+    this.set('reference', reference);
+  }
+
+  /** Non-spec alias kept for compatibility with earlier documents. */
   get $ref(): StringElement | undefined {
     return this.get('$ref');
   }

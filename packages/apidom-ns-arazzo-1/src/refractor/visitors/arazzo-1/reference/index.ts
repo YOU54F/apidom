@@ -37,7 +37,7 @@ class ReferenceVisitor extends Mixin(FixedFieldsVisitor, FallbackVisitor) {
     const result = FixedFieldsVisitor.prototype.ObjectElement.call(this, objectElement);
 
     // mark this ReferenceElement with reference metadata
-    if (isStringElement(this.element.$ref)) {
+    if (isStringElement(this.element.reference) || isStringElement(this.element.$ref)) {
       this.element.classes.push('reference-element');
     }
 

@@ -114,7 +114,7 @@ exports[`refractor elements Arazzo11ExtensionsElement should refract workflow le
         (MemberElement
           (StringElement)
           (StringElement)))
-      (ParameterElement
+      (ReferenceElement
         (MemberElement
           (StringElement)
           (StringElement)))

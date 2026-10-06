@@ -5,6 +5,7 @@ import {
   ArazzoSpecification1Element,
   isSelectorElement,
   isRequestBodyElement,
+  isReferenceElement,
 } from '../../../src/index.ts';
 
 const doc = (arazzo: string | undefined) => ({
@@ -100,6 +101,30 @@ describe('refractor', function () {
       const el: any = ArazzoSpecification1Element.refract(doc('1.0.1'));
 
       expect(isSelectorElement(step(el).get('outputs').get('picked'))).to.be.false;
+    });
+  });
+});
+
+describe('refractor reusable objects', function () {
+  context('reusable objects', function () {
+    specify('should refract `reference` as a Reference element', function () {
+      const el: any = ArazzoSpecification1Element.refract({
+        arazzo: '1.0.1',
+        info: { title: 't', version: '1' },
+        sourceDescriptions: [{ name: 'a', url: 'a.yaml' }],
+        workflows: [
+          {
+            workflowId: 'w',
+            steps: [],
+            parameters: [{ reference: '$components.parameters.p', value: 1 }],
+          },
+        ],
+      });
+      const param = el.get('workflows').get(0).get('parameters').get(0);
+
+      expect(isReferenceElement(param)).to.be.true;
+      expect(toValue(param.reference)).to.equal('$components.parameters.p');
+      expect(param.classes.includes('reference-element')).to.be.true;
     });
   });
 });
