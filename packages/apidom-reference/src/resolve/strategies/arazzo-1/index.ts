@@ -66,7 +66,7 @@ class Arazzo1ResolveStrategy extends ResolveStrategy {
     const refSet = new ReferenceSet();
     const mergedOptions = mergeOptions(options, {
       resolve: { internal: false },
-      dereference: { refSet },
+      dereference: { refSet, immutable: false },
     });
 
     await dereferenceStrategy.dereference(file, mergedOptions);

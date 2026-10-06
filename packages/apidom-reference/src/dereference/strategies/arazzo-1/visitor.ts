@@ -11,9 +11,15 @@ import {
   ArazzoSpecification1Element,
   ReferenceElement,
   ParameterElement,
+  SourceDescriptionElement,
   isParameterElement,
 } from '@swagger-api/apidom-ns-arazzo-1';
 
+import MaximumResolveDepthError from '../../../errors/MaximumResolveDepthError.ts';
+import * as url from '../../../util/url.ts';
+import parse from '../../../parse/index.ts';
+import Reference from '../../../Reference.ts';
+import ReferenceSet from '../../../ReferenceSet.ts';
 import type { ReferenceOptions } from '../../../options/index.ts';
 
 /**
@@ -39,6 +45,7 @@ export const mutationReplacer = (
 export interface Arazzo1DereferenceVisitorOptions {
   readonly root: ArazzoSpecification1Element;
   readonly options: ReferenceOptions;
+  readonly reference: Reference;
 }
 
 const COMPONENT_EXPRESSION = /^\$components\.(parameters|successActions|failureActions)\.([^.]+)$/;
@@ -53,9 +60,67 @@ class Arazzo1DereferenceVisitor {
 
   protected readonly options: ReferenceOptions;
 
-  constructor({ root, options }: Arazzo1DereferenceVisitorOptions) {
+  protected readonly reference: Reference;
+
+  constructor({ root, options, reference }: Arazzo1DereferenceVisitorOptions) {
     this.root = root;
     this.options = options;
+    this.reference = reference;
+  }
+
+  /**
+   * Loads the document a Source Description points at into the ReferenceSet.
+   * The Source Description itself is left untouched: its operations are addressed
+   * by runtime expressions, which are not replaced.
+   */
+  public async SourceDescriptionElement(sourceDescription: SourceDescriptionElement) {
+    if (!this.options.resolve.external) {
+      return undefined;
+    }
+
+    const sourceUrl = sourceDescription.url;
+    if (!isStringElement(sourceUrl)) {
+      return undefined;
+    }
+
+    if (this.reference.depth >= this.options.resolve.maxDepth) {
+      throw new MaximumResolveDepthError(
+        `Maximum resolution depth of ${this.options.resolve.maxDepth} has been exceeded by file "${this.reference.uri}"`,
+      );
+    }
+
+    const baseURI = url.resolve(
+      this.reference.uri,
+      url.sanitize(url.stripHash(toValue(sourceUrl))),
+    );
+    const { refSet } = this.reference as { refSet: ReferenceSet };
+
+    if (refSet.has(baseURI)) {
+      return undefined;
+    }
+
+    const parseResult = await parse(url.unsanitize(baseURI), {
+      ...this.options,
+      parse: { ...this.options.parse, mediaType: 'text/plain' },
+    });
+
+    refSet.add(
+      new Reference({
+        uri: baseURI,
+        value: cloneDeep(parseResult),
+        depth: this.reference.depth + 1,
+      }),
+    );
+    if (this.options.dereference.immutable) {
+      refSet.add(
+        new Reference({
+          uri: `immutable://${baseURI}`,
+          value: parseResult,
+          depth: this.reference.depth + 1,
+        }),
+      );
+    }
+    return undefined;
   }
 
   public ReferenceElement(

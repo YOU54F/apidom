@@ -70,6 +70,7 @@ class Arazzo1DereferenceStrategy extends DereferenceStrategy {
     const visitor = new Arazzo1DereferenceVisitor({
       root: rootElement as never,
       options,
+      reference: refSet.rootRef!,
     });
 
     const dereferencedElement = await visitAsync(root, visitor, {
