@@ -24,6 +24,22 @@ class Components extends ObjectElement {
   set parameters(parameters: ObjectElement | undefined) {
     this.set('parameters', parameters);
   }
+
+  get successActions(): ObjectElement | undefined {
+    return this.get('successActions');
+  }
+
+  set successActions(successActions: ObjectElement | undefined) {
+    this.set('successActions', successActions);
+  }
+
+  get failureActions(): ObjectElement | undefined {
+    return this.get('failureActions');
+  }
+
+  set failureActions(failureActions: ObjectElement | undefined) {
+    this.set('failureActions', failureActions);
+  }
 }
 
 export default Components;

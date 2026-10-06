@@ -63,6 +63,22 @@ class FailureAction extends ObjectElement {
   set criteria(criteria: ArrayElement | undefined) {
     this.set('criteria', criteria);
   }
+
+  get name(): StringElement | undefined {
+    return this.get('name');
+  }
+
+  set name(name: StringElement | undefined) {
+    this.set('name', name);
+  }
+
+  get parameters(): ArrayElement | undefined {
+    return this.get('parameters');
+  }
+
+  set parameters(parameters: ArrayElement | undefined) {
+    this.set('parameters', parameters);
+  }
 }
 
 export default FailureAction;

@@ -26,9 +26,21 @@ import StepOnFailureElement from './elements/nces/StepOnFailure.ts';
 import StepOutputsElement from './elements/nces/StepOutputs.ts';
 import SuccessActionCriteriaElement from './elements/nces/SuccessActionCriteria.ts';
 import FailureActionCriteriaElement from './elements/nces/FailureActionCriteria.ts';
+import RequestBodyElement from './elements/RequestBody.ts';
+import PayloadReplacementElement from './elements/PayloadReplacement.ts';
+import SelectorElement from './elements/Selector.ts';
+import ExpressionTypeElement from './elements/ExpressionType.ts';
+import WorkflowDependsOnElement from './elements/nces/WorkflowDependsOn.ts';
+import WorkflowParametersElement from './elements/nces/WorkflowParameters.ts';
+import WorkflowSuccessActionsElement from './elements/nces/WorkflowSuccessActions.ts';
+import WorkflowFailureActionsElement from './elements/nces/WorkflowFailureActions.ts';
+import ComponentsSuccessActionsElement from './elements/nces/ComponentsSuccessActions.ts';
+import ComponentsFailureActionsElement from './elements/nces/ComponentsFailureActions.ts';
+import RequestBodyReplacementsElement from './elements/nces/RequestBodyReplacements.ts';
+import SuccessActionParametersElement from './elements/nces/SuccessActionParameters.ts';
+import FailureActionParametersElement from './elements/nces/FailureActionParameters.ts';
 
 export { isJSONSchemaElement };
-
 /**
  * @public
  */
@@ -356,5 +368,183 @@ export const isFailureActionCriteriaElement = createPredicate(
         primitiveEq('array', element) &&
         hasClass('failure-action-criteria', element) &&
         hasClass('criteria', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isRequestBodyElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq }) => {
+    return (element: unknown): element is RequestBodyElement =>
+      element instanceof RequestBodyElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('requestBody', element) &&
+        primitiveEq('object', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isPayloadReplacementElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq }) => {
+    return (element: unknown): element is PayloadReplacementElement =>
+      element instanceof PayloadReplacementElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('payloadReplacement', element) &&
+        primitiveEq('object', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isSelectorElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq }) => {
+    return (element: unknown): element is SelectorElement =>
+      element instanceof SelectorElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('selector', element) &&
+        primitiveEq('object', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isExpressionTypeElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq }) => {
+    return (element: unknown): element is ExpressionTypeElement =>
+      element instanceof ExpressionTypeElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('expressionType', element) &&
+        primitiveEq('object', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isWorkflowDependsOnElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is WorkflowDependsOnElement =>
+      element instanceof WorkflowDependsOnElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('workflow-depends-on', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isWorkflowParametersElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is WorkflowParametersElement =>
+      element instanceof WorkflowParametersElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('workflow-parameters', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isWorkflowSuccessActionsElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is WorkflowSuccessActionsElement =>
+      element instanceof WorkflowSuccessActionsElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('workflow-success-actions', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isWorkflowFailureActionsElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is WorkflowFailureActionsElement =>
+      element instanceof WorkflowFailureActionsElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('workflow-failure-actions', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isComponentsSuccessActionsElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is ComponentsSuccessActionsElement =>
+      element instanceof ComponentsSuccessActionsElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('object', element) &&
+        primitiveEq('object', element) &&
+        hasClass('components-success-actions', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isComponentsFailureActionsElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is ComponentsFailureActionsElement =>
+      element instanceof ComponentsFailureActionsElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('object', element) &&
+        primitiveEq('object', element) &&
+        hasClass('components-failure-actions', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isRequestBodyReplacementsElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is RequestBodyReplacementsElement =>
+      element instanceof RequestBodyReplacementsElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('request-body-replacements', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isSuccessActionParametersElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is SuccessActionParametersElement =>
+      element instanceof SuccessActionParametersElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('success-action-parameters', element));
+  },
+);
+
+/**
+ * @public
+ */
+export const isFailureActionParametersElement = createPredicate(
+  ({ hasBasicElementProps, isElementType, primitiveEq, hasClass }) => {
+    return (element: unknown): element is FailureActionParametersElement =>
+      element instanceof FailureActionParametersElement ||
+      (hasBasicElementProps(element) &&
+        isElementType('array', element) &&
+        primitiveEq('array', element) &&
+        hasClass('failure-action-parameters', element));
   },
 );

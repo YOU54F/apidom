@@ -29,6 +29,20 @@ import ComponentsParametersVisitor from './visitors/arazzo-1/components/Paramete
 import CriterionVisitor from './visitors/arazzo-1/criterion/index.ts';
 import ReferenceVisitor from './visitors/arazzo-1/reference/index.ts';
 import Reference$RefVisitor from './visitors/arazzo-1/reference/$RefVisitor.ts';
+import WorkflowParametersVisitor from './visitors/arazzo-1/workflow/ParametersVisitor.ts';
+import WorkflowDependsOnVisitor from './visitors/arazzo-1/workflow/DependsOnVisitor.ts';
+import WorkflowSuccessActionsVisitor from './visitors/arazzo-1/workflow/SuccessActionsVisitor.ts';
+import WorkflowFailureActionsVisitor from './visitors/arazzo-1/workflow/FailureActionsVisitor.ts';
+import SuccessActionParametersVisitor from './visitors/arazzo-1/success-action/ParametersVisitor.ts';
+import FailureActionParametersVisitor from './visitors/arazzo-1/failure-action/ParametersVisitor.ts';
+import ComponentsSuccessActionsVisitor from './visitors/arazzo-1/components/SuccessActionsVisitor.ts';
+import ComponentsFailureActionsVisitor from './visitors/arazzo-1/components/FailureActionsVisitor.ts';
+import RequestBodyVisitor from './visitors/arazzo-1/request-body/index.ts';
+import RequestBodyReplacementsVisitor from './visitors/arazzo-1/request-body/ReplacementsVisitor.ts';
+import PayloadReplacementVisitor from './visitors/arazzo-1/payload-replacement/index.ts';
+import SelectorVisitor from './visitors/arazzo-1/selector/index.ts';
+import ExpressionTypeVisitor from './visitors/arazzo-1/expression-type/index.ts';
+import ExpressionTypeValueVisitor from './visitors/arazzo-1/ExpressionTypeValueVisitor.ts';
 import SpecificationExtensionVisitor from './visitors/SpecificationExtensionVisitor.ts';
 import FallbackVisitor from './visitors/FallbackVisitor.ts';
 
@@ -55,6 +69,7 @@ const specification = {
           $visitor: ArazzoSpecificationVisitor,
           fixedFields: {
             arazzo: ArazzoSpecVisitor,
+            $self: { $ref: '#/visitors/value' },
             info: {
               $ref: '#/visitors/document/objects/Info',
             },
@@ -89,7 +104,11 @@ const specification = {
             summary: { $ref: '#/visitors/value' },
             description: { $ref: '#/visitors/value' },
             inputs: JSONSchemaVisitor,
+            dependsOn: WorkflowDependsOnVisitor,
             steps: WorkflowStepsVisitor,
+            successActions: WorkflowSuccessActionsVisitor,
+            failureActions: WorkflowFailureActionsVisitor,
+            parameters: WorkflowParametersVisitor,
             outputs: workflowOutputsVisitor,
           },
         },
@@ -100,13 +119,19 @@ const specification = {
             stepId: { $ref: '#/visitors/value' },
             operationId: { $ref: '#/visitors/value' },
             operationRef: { $ref: '#/visitors/value' },
+            operationPath: { $ref: '#/visitors/value' },
+            channelPath: { $ref: '#/visitors/value' },
             workflowId: { $ref: '#/visitors/value' },
             parameters: StepParametersVisitor,
             dependsOn: StepDependsOnVisitor,
             successCriteria: StepSuccessCriteriaVisitor,
             onSuccess: StepOnSuccessVisitor,
             onFailure: StepOnFailureVisitor,
+            requestBody: { $ref: '#/visitors/document/objects/RequestBody' },
             outputs: StepOutputsVisitor,
+            timeout: { $ref: '#/visitors/value' },
+            correlationId: { $ref: '#/visitors/value' },
+            action: { $ref: '#/visitors/value' },
           },
         },
         Parameter: {
@@ -122,6 +147,8 @@ const specification = {
         SuccessAction: {
           $visitor: SuccessActionVisitor,
           fixedFields: {
+            name: { $ref: '#/visitors/value' },
+            parameters: SuccessActionParametersVisitor,
             type: { $ref: '#/visitors/value' },
             workflowId: { $ref: '#/visitors/value' },
             stepId: { $ref: '#/visitors/value' },
@@ -131,6 +158,8 @@ const specification = {
         FailureAction: {
           $visitor: FailureActionVisitor,
           fixedFields: {
+            name: { $ref: '#/visitors/value' },
+            parameters: FailureActionParametersVisitor,
             type: { $ref: '#/visitors/value' },
             workflowId: { $ref: '#/visitors/value' },
             stepId: { $ref: '#/visitors/value' },
@@ -144,6 +173,8 @@ const specification = {
           fixedFields: {
             inputs: ComponentsInputsVisitor,
             parameters: ComponentsParametersVisitor,
+            successActions: ComponentsSuccessActionsVisitor,
+            failureActions: ComponentsFailureActionsVisitor,
           },
         },
         Criterion: {
@@ -151,7 +182,38 @@ const specification = {
           fixedFields: {
             context: { $ref: '#/visitors/value' },
             condition: { $ref: '#/visitors/value' },
+            type: ExpressionTypeValueVisitor,
+          },
+        },
+        RequestBody: {
+          $visitor: RequestBodyVisitor,
+          fixedFields: {
+            contentType: { $ref: '#/visitors/value' },
+            payload: { $ref: '#/visitors/value' },
+            replacements: RequestBodyReplacementsVisitor,
+          },
+        },
+        PayloadReplacement: {
+          $visitor: PayloadReplacementVisitor,
+          fixedFields: {
+            target: { $ref: '#/visitors/value' },
+            targetSelectorType: ExpressionTypeValueVisitor,
+            value: { $ref: '#/visitors/value' },
+          },
+        },
+        Selector: {
+          $visitor: SelectorVisitor,
+          fixedFields: {
+            context: { $ref: '#/visitors/value' },
+            selector: { $ref: '#/visitors/value' },
+            type: ExpressionTypeValueVisitor,
+          },
+        },
+        ExpressionType: {
+          $visitor: ExpressionTypeVisitor,
+          fixedFields: {
             type: { $ref: '#/visitors/value' },
+            version: { $ref: '#/visitors/value' },
           },
         },
         Reference: {

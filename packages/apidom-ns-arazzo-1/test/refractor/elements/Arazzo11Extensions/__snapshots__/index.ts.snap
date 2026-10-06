@@ -1,0 +1,165 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`refractor elements Arazzo11ExtensionsElement should refract components actions and $self 1`] = `
+(ComponentsElement
+  (MemberElement
+    (StringElement)
+    (ObjectElement
+      (MemberElement
+        (StringElement)
+        (SuccessActionElement
+          (MemberElement
+            (StringElement)
+            (StringElement))
+          (MemberElement
+            (StringElement)
+            (StringElement))))))
+  (MemberElement
+    (StringElement)
+    (ObjectElement
+      (MemberElement
+        (StringElement)
+        (FailureActionElement
+          (MemberElement
+            (StringElement)
+            (StringElement))
+          (MemberElement
+            (StringElement)
+            (StringElement)))))))
+`;
+
+exports[`refractor elements Arazzo11ExtensionsElement should refract criterion expression type object 1`] = `
+(CriterionElement
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (ExpressionTypeElement
+      (MemberElement
+        (StringElement)
+        (StringElement))
+      (MemberElement
+        (StringElement)
+        (StringElement)))))
+`;
+
+exports[`refractor elements Arazzo11ExtensionsElement should refract step level fields 1`] = `
+(StepElement
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (NumberElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (RequestBodyElement
+      (MemberElement
+        (StringElement)
+        (StringElement))
+      (MemberElement
+        (StringElement)
+        (ObjectElement))))
+  (MemberElement
+    (StringElement)
+    (ArrayElement
+      (ReferenceElement
+        (MemberElement
+          (StringElement)
+          (StringElement)))
+      (SuccessActionElement
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (StringElement))))))
+`;
+
+exports[`refractor elements Arazzo11ExtensionsElement should refract workflow level fields 1`] = `
+(WorkflowElement
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (ArrayElement
+      (StringElement)))
+  (MemberElement
+    (StringElement)
+    (ArrayElement
+      (ParameterElement
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (StringElement)))
+      (ParameterElement
+        (MemberElement
+          (StringElement)
+          (StringElement)))
+      (ReferenceElement
+        (MemberElement
+          (StringElement)
+          (StringElement)))))
+  (MemberElement
+    (StringElement)
+    (ArrayElement
+      (SuccessActionElement
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (StringElement)))
+      (ReferenceElement
+        (MemberElement
+          (StringElement)
+          (StringElement)))))
+  (MemberElement
+    (StringElement)
+    (ArrayElement
+      (FailureActionElement
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (StringElement))
+        (MemberElement
+          (StringElement)
+          (NumberElement))
+        (MemberElement
+          (StringElement)
+          (ArrayElement
+            (ParameterElement
+              (MemberElement
+                (StringElement)
+                (StringElement))
+              (MemberElement
+                (StringElement)
+                (NumberElement))))))))
+  (MemberElement
+    (StringElement)
+    (ArrayElement)))
+`;

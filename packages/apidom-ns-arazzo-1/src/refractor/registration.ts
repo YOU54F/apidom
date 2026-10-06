@@ -12,6 +12,10 @@ import FailureActionElement from '../elements/FailureAction.ts';
 import ComponentsElement from '../elements/Components.ts';
 import CriterionElement from '../elements/Criterion.ts';
 import ReferenceElement from '../elements/Reference.ts';
+import RequestBodyElement from '../elements/RequestBody.ts';
+import PayloadReplacementElement from '../elements/PayloadReplacement.ts';
+import SelectorElement from '../elements/Selector.ts';
+import ExpressionTypeElement from '../elements/ExpressionType.ts';
 import { createRefractor } from './index.ts';
 
 InfoElement.refract = createRefractor(['visitors', 'document', 'objects', 'Info', '$visitor']);
@@ -87,6 +91,34 @@ ReferenceElement.refract = createRefractor([
   'Reference',
   '$visitor',
 ]);
+RequestBodyElement.refract = createRefractor([
+  'visitors',
+  'document',
+  'objects',
+  'RequestBody',
+  '$visitor',
+]);
+PayloadReplacementElement.refract = createRefractor([
+  'visitors',
+  'document',
+  'objects',
+  'PayloadReplacement',
+  '$visitor',
+]);
+SelectorElement.refract = createRefractor([
+  'visitors',
+  'document',
+  'objects',
+  'Selector',
+  '$visitor',
+]);
+ExpressionTypeElement.refract = createRefractor([
+  'visitors',
+  'document',
+  'objects',
+  'ExpressionType',
+  '$visitor',
+]);
 JSONSchemaElement.refract = createRefractor([
   'visitors',
   'document',
@@ -108,5 +140,9 @@ export {
   ComponentsElement,
   CriterionElement,
   ReferenceElement,
+  RequestBodyElement,
+  PayloadReplacementElement,
+  SelectorElement,
+  ExpressionTypeElement,
   JSONSchemaElement,
 };

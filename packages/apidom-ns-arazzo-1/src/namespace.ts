@@ -13,6 +13,10 @@ import FailureActionElement from './elements/FailureAction.ts';
 import ComponentsElement from './elements/Components.ts';
 import CriterionElement from './elements/Criterion.ts';
 import ReferenceElement from './elements/Reference.ts';
+import RequestBodyElement from './elements/RequestBody.ts';
+import PayloadReplacementElement from './elements/PayloadReplacement.ts';
+import SelectorElement from './elements/Selector.ts';
+import ExpressionTypeElement from './elements/ExpressionType.ts';
 
 /**
  * @public
@@ -33,6 +37,10 @@ const arazzo1 = {
     base.register('components', ComponentsElement);
     base.register('criterion', CriterionElement);
     base.register('reference', ReferenceElement);
+    base.register('requestBody', RequestBodyElement);
+    base.register('payloadReplacement', PayloadReplacementElement);
+    base.register('selector', SelectorElement);
+    base.register('expressionType', ExpressionTypeElement);
     base.register('jSONSchema202012', JSONSchemaElement);
 
     return base;
