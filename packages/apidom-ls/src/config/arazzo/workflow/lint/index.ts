@@ -11,8 +11,10 @@ import successActionsTypeLint from './success-actions--type.ts';
 import failureActionsTypeLint from './failure-actions--type.ts';
 import outputsTypeLint from './outputs--type.ts';
 import parametersTypeLint from './parameters--type.ts';
+import workflowIdUniqueLint from './workflow-id--unique.ts';
 
 const lints = [
+  workflowIdUniqueLint,
   allowedFieldsLint,
   workflowIdRequiredLint,
   workflowIdTypeLint,

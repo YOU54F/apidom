@@ -37,7 +37,13 @@ import {
 import { FunctionItem } from '../../apidom-language-types.ts';
 
 const root = (el: Element): Element => {
-  const rootElementTypes = ['swagger', 'openApi3_0', 'openApi3_1', 'asyncApi2'];
+  const rootElementTypes = [
+    'swagger',
+    'openApi3_0',
+    'openApi3_1',
+    'asyncApi2',
+    'arazzoSpecification1',
+  ];
   let node = el;
 
   while (node.parent && !rootElementTypes.includes(node.parent.element)) {
@@ -130,6 +136,22 @@ const isType = (element: Element, elementType: string): boolean => {
     //
   }
   return true;
+};
+
+const enclosingArazzoWorkflow = (element: Element): Element | undefined => {
+  let current: Element | undefined = element.parent as Element | undefined;
+  while (current && current.element !== 'workflow') {
+    current = current.parent as Element | undefined;
+  }
+  return current;
+};
+
+const arazzoStepIds = (workflow: Element): unknown[] => {
+  const steps = (workflow as ObjectElement).get('steps');
+  if (!isArray(steps)) return [];
+  return ((steps as ArrayElement).content as Element[])
+    .filter((step) => isObject(step) && (step as ObjectElement).hasKey('stepId'))
+    .map((step) => toValue((step as ObjectElement).get('stepId')));
 };
 
 // eslint-disable-next-line import/prefer-default-export
@@ -1133,6 +1155,43 @@ export const standardLinterfunctions: FunctionItem[] = [
       }
 
       return !containerCache.get(cacheKey)!.has(value);
+    },
+  },
+  {
+    functionName: 'arazzoWorkflowExists',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      // runtime expressions and non-strings are not workflow ids
+      if (typeof value !== 'string' || value.startsWith('$')) return true;
+      const api = root(element);
+      if (!api) return true;
+      const ids: unknown[] = [];
+      traverse((el: Element) => {
+        if (el.element === 'workflow' && isObject(el) && el.hasKey('workflowId')) {
+          ids.push(toValue(el.get('workflowId')));
+        }
+      }, api);
+      return ids.length === 0 || ids.includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoStepExists',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      if (typeof value !== 'string' || value.startsWith('$')) return true;
+      const workflow = enclosingArazzoWorkflow(element);
+      // actions under components are not bound to a workflow
+      if (!workflow || !isObject(workflow) || !isArray(workflow.get('steps'))) return true;
+      return arazzoStepIds(workflow).includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoStepIdUnique',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      const workflow = enclosingArazzoWorkflow(element);
+      if (!workflow || !isObject(workflow)) return true;
+      return arazzoStepIds(workflow).filter((id) => id === value).length < 2;
     },
   },
   {

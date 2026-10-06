@@ -9,8 +9,12 @@ import stepIdTypeLint from './step-id--type.ts';
 import retryAfterTypeLint from './retry-after--type.ts';
 import retryLimitTypeLint from './retry-limit--type.ts';
 import criteriaTypeLint from './criteria--type.ts';
+import workflowIdExistsLint from './workflow-id--exists.ts';
+import stepIdExistsLint from './step-id--exists.ts';
 
 const lints = [
+  stepIdExistsLint,
+  workflowIdExistsLint,
   allowedFieldsLint,
   nameRequiredLint,
   nameTypeLint,

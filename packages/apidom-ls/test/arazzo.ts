@@ -77,6 +77,17 @@ describe('apidom-ls-arazzo', function () {
     assert.lengthOf(notAllowed, 2);
   });
 
+  it('reports broken cross references and duplicate ids', async function () {
+    this.timeout(10000);
+    const result = await validate('cross-references.yaml', 'yaml');
+    const count = (m: string) => result.filter((d) => d.message === m).length;
+    assert.equal(count("'stepId' does not match any step in this workflow"), 1);
+    assert.equal(count("'workflowId' does not match any workflow in this document"), 2);
+    assert.equal(count("'stepId' must be unique within the workflow"), 2);
+    assert.equal(count("'workflowId' must be unique among all workflows"), 2);
+    assert.equal(count("'name' must be unique among all source descriptions"), 2);
+  });
+
   it('offers field completion in a step', async function () {
     this.timeout(10000);
     const text =

@@ -17,8 +17,12 @@ import onFailureTypeLint from './on-failure--type.ts';
 import outputsTypeLint from './outputs--type.ts';
 import timeoutTypeLint from './timeout--type.ts';
 import correlationIdTypeLint from './correlation-id--type.ts';
+import workflowIdExistsLint from './workflow-id--exists.ts';
+import stepIdUniqueLint from './step-id--unique.ts';
 
 const lints = [
+  stepIdUniqueLint,
+  workflowIdExistsLint,
   allowedFieldsLint,
   allowedFields11Lint,
   stepIdRequiredLint,
