@@ -1074,9 +1074,10 @@ export const standardLinterfunctions: FunctionItem[] = [
 
             if (
               (elementOrClasses.includes(el.element) ||
-                classes.filter((classElement: Element) =>
-                  elementOrClasses.includes(toValue(classElement)),
-                ).length === classes.length) &&
+                (classes.length > 0 &&
+                  classes.filter((classElement: Element) =>
+                    elementOrClasses.includes(toValue(classElement)),
+                  ).length === classes.length)) &&
               isObject(el) &&
               el.hasKey(key)
             ) {

@@ -9,8 +9,9 @@ import stepIdTypeLint from './step-id--type.ts';
 import criteriaTypeLint from './criteria--type.ts';
 import workflowIdExistsLint from './workflow-id--exists.ts';
 import stepIdExistsLint from './step-id--exists.ts';
+import skipReusableObjects from '../../skip-reusable.ts';
 
-const lints = [
+const lints = skipReusableObjects([
   stepIdExistsLint,
   workflowIdExistsLint,
   allowedFieldsLint,
@@ -22,6 +23,6 @@ const lints = [
   workflowIdTypeLint,
   stepIdTypeLint,
   criteriaTypeLint,
-];
+]);
 
 export default lints;

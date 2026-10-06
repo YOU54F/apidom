@@ -11,8 +11,9 @@ import retryLimitTypeLint from './retry-limit--type.ts';
 import criteriaTypeLint from './criteria--type.ts';
 import workflowIdExistsLint from './workflow-id--exists.ts';
 import stepIdExistsLint from './step-id--exists.ts';
+import skipReusableObjects from '../../skip-reusable.ts';
 
-const lints = [
+const lints = skipReusableObjects([
   stepIdExistsLint,
   workflowIdExistsLint,
   allowedFieldsLint,
@@ -26,6 +27,6 @@ const lints = [
   retryAfterTypeLint,
   retryLimitTypeLint,
   criteriaTypeLint,
-];
+]);
 
 export default lints;

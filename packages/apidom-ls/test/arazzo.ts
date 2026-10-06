@@ -51,6 +51,11 @@ describe('apidom-ls-arazzo', function () {
     assert.deepEqual(await validate('valid-1.1.0.json', 'json'), []);
   });
 
+  it('does not apply parameter and action rules to Reusable Objects or valid references', async function () {
+    this.timeout(10000);
+    assert.deepEqual(await validate('reusable-objects.yaml', 'yaml'), []);
+  });
+
   it('reports missing required fields', async function () {
     this.timeout(10000);
     const messages = (await validate('missing-required.yaml', 'yaml')).map((d) => d.message);

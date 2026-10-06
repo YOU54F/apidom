@@ -225,15 +225,20 @@ export function localReferencePointers(
     }
   }
 
+  // Arazzo refracts JSON Schemas directly (workflow inputs), not through a 'schema' element.
+  const isNodeElement = (traversedNode: Element): boolean =>
+    traversedNode.element === nodeElement ||
+    (nodeElement === 'schema' && traversedNode.element === 'JSONSchema202012');
+
   // TODO check for reference-element class or type instead
   function findRefNodes(traversedNode: Element): void {
     if (includeRefs) {
       const isRef =
         nodeElement === toValue(traversedNode.getMetaProperty('referenced-element', ''));
-      if (isRef || traversedNode.element === nodeElement) {
+      if (isRef || isNodeElement(traversedNode)) {
         foundNodes.push({ element: traversedNode, isRef });
       }
-    } else if (traversedNode.element === nodeElement) {
+    } else if (isNodeElement(traversedNode)) {
       if (
         !(
           isObject(traversedNode) &&
