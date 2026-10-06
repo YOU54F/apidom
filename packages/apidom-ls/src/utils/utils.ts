@@ -12,6 +12,8 @@ import * as asyncapi3AdapterJson from '@swagger-api/apidom-parser-adapter-asynca
 import * as asyncapi3AdapterYaml from '@swagger-api/apidom-parser-adapter-asyncapi-yaml-3';
 import * as a2a1AdapterJson from '@swagger-api/apidom-parser-adapter-a2a-json-1';
 import * as a2a1AdapterYaml from '@swagger-api/apidom-parser-adapter-a2a-yaml-1';
+import * as arazzo1AdapterJson from '@swagger-api/apidom-parser-adapter-arazzo-json-1';
+import * as arazzo1AdapterYaml from '@swagger-api/apidom-parser-adapter-arazzo-yaml-1';
 import * as adsAdapterJson from '@swagger-api/apidom-parser-adapter-api-design-systems-json';
 import * as adsAdapterYaml from '@swagger-api/apidom-parser-adapter-api-design-systems-yaml';
 import * as adapterJson from '@swagger-api/apidom-parser-adapter-json';
@@ -973,6 +975,30 @@ export async function findNamespace(
       format: 'YAML',
       admitsRefsSiblings: true,
       mediaType: openapi32AdapterYaml.mediaTypes.findBy(version, 'yaml'),
+    };
+  }
+
+  if (await arazzo1AdapterJson.detect(text)) {
+    const groups = text.match(arazzo1AdapterJson.detectionRegExp)!.groups!;
+    const version = groups.version_json;
+
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'JSON',
+      mediaType: arazzo1AdapterJson.mediaTypes.findBy(version, 'json'),
+    };
+  }
+
+  if (await arazzo1AdapterYaml.detect(text)) {
+    const groups = text.match(arazzo1AdapterYaml.detectionRegExp)!.groups!;
+    const version = groups.version_json ?? groups.version_yaml;
+
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'YAML',
+      mediaType: arazzo1AdapterYaml.mediaTypes.findBy(version, 'yaml'),
     };
   }
 

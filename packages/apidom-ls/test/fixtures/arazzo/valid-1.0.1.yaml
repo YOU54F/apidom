@@ -1,0 +1,23 @@
+arazzo: 1.0.1
+info:
+  title: Pet flow
+  version: 1.0.0
+sourceDescriptions:
+  - name: petstore
+    url: https://example.com/openapi.json
+    type: openapi
+workflows:
+  - workflowId: adopt
+    steps:
+      - stepId: find
+        operationId: $sourceDescriptions.petstore.findPets
+        parameters:
+          - name: status
+            in: query
+            value: available
+        successCriteria:
+          - condition: $statusCode == 200
+        onFailure:
+          - name: retry
+            type: retry
+            retryAfter: 1

@@ -1,0 +1,16 @@
+{
+  "arazzo": "1.1.0",
+  "$self": "https://example.com/flow",
+  "info": { "title": "Pet flow", "version": "1.0.0" },
+  "sourceDescriptions": [
+    { "name": "petstore", "url": "https://example.com/openapi.json", "type": "openapi" }
+  ],
+  "workflows": [
+    {
+      "workflowId": "adopt",
+      "steps": [
+        { "stepId": "find", "operationId": "$sourceDescriptions.petstore.findPets", "timeout": 100 }
+      ]
+    }
+  ]
+}

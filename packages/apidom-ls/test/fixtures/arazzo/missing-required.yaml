@@ -1,0 +1,8 @@
+arazzo: 1.0.1
+info:
+  title: Pet flow
+sourceDescriptions:
+  - name: petstore
+workflows:
+  - steps:
+      - operationId: a

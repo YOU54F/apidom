@@ -12,6 +12,8 @@ import * as asyncapi3AdapterJson from '@swagger-api/apidom-parser-adapter-asynca
 import * as asyncapi3AdapterYaml from '@swagger-api/apidom-parser-adapter-asyncapi-yaml-3';
 import * as a2a1AdapterJson from '@swagger-api/apidom-parser-adapter-a2a-json-1';
 import * as a2a1AdapterYaml from '@swagger-api/apidom-parser-adapter-a2a-yaml-1';
+import * as arazzo1AdapterJson from '@swagger-api/apidom-parser-adapter-arazzo-json-1';
+import * as arazzo1AdapterYaml from '@swagger-api/apidom-parser-adapter-arazzo-yaml-1';
 import * as adsAdapterJson from '@swagger-api/apidom-parser-adapter-api-design-systems-json';
 import * as adsAdapterYaml from '@swagger-api/apidom-parser-adapter-api-design-systems-yaml';
 import * as adapterJson from '@swagger-api/apidom-parser-adapter-json';
@@ -23,6 +25,7 @@ import { refractorPluginReplaceEmptyElement as refractorPluginReplaceEmptyElemen
 import { refractorPluginReplaceEmptyElement as refractorPluginReplaceEmptyElementOpenAPI3_1 } from '@swagger-api/apidom-ns-openapi-3-1';
 import { refractorPluginReplaceEmptyElement as refractorPluginReplaceEmptyElementOpenAPI3_2 } from '@swagger-api/apidom-ns-openapi-3-2';
 import { refractorPluginReplaceEmptyElement as refractorPluginReplaceEmptyElementA2A1 } from '@swagger-api/apidom-ns-a2a-1';
+import { refractorPluginReplaceEmptyElement as refractorPluginReplaceEmptyElementArazzo1 } from '@swagger-api/apidom-ns-arazzo-1';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ParseResultElement } from '@swagger-api/apidom-core';
 
@@ -222,6 +225,27 @@ export async function parse(
     };
 
     result = await openapi3_2AdapterYaml.parse(text, options);
+  } else if (contentLanguage.namespace === 'arazzo' && contentLanguage.format === 'JSON') {
+    const options: Record<string, unknown> = {
+      sourceMap: true,
+      refractorOpts: {
+        plugins: [...(refractorPlugins?.['arazzo-1'] || [])],
+      },
+    };
+
+    result = await arazzo1AdapterJson.parse(text, options);
+  } else if (contentLanguage.namespace === 'arazzo' && contentLanguage.format === 'YAML') {
+    const options: Record<string, unknown> = {
+      sourceMap: true,
+      refractorOpts: {
+        plugins: [
+          registerPlugins && refractorPluginReplaceEmptyElementArazzo1(),
+          ...(refractorPlugins?.['arazzo-1'] || []),
+        ].filter(Boolean),
+      },
+    };
+
+    result = await arazzo1AdapterYaml.parse(text, options);
   } else if (contentLanguage.namespace === 'a2a' && contentLanguage.format === 'JSON') {
     const options: Record<string, unknown> = {
       sourceMap: true,

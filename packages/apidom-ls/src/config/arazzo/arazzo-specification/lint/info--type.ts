@@ -1,0 +1,19 @@
+import { DiagnosticSeverity } from 'vscode-languageserver-types';
+
+import ApilintCodes from '../../../codes.ts';
+import { LinterMeta } from '../../../../apidom-language-types.ts';
+import { ARAZZO1 } from '../../target-specs.ts';
+
+const lint: LinterMeta = {
+  code: ApilintCodes.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_INFO_TYPE,
+  source: 'apilint',
+  message: "'info' must be an object",
+  severity: DiagnosticSeverity.Error,
+  linterFunction: 'apilintType',
+  linterParams: ['object'],
+  marker: 'value',
+  target: 'info',
+  targetSpecs: ARAZZO1,
+};
+
+export default lint;
