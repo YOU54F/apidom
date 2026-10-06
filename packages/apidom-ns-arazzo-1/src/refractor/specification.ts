@@ -42,6 +42,7 @@ import RequestBodyReplacementsVisitor from './visitors/arazzo-1/request-body/Rep
 import PayloadReplacementVisitor from './visitors/arazzo-1/payload-replacement/index.ts';
 import SelectorVisitor from './visitors/arazzo-1/selector/index.ts';
 import ExpressionTypeVisitor from './visitors/arazzo-1/expression-type/index.ts';
+import SelectorValueVisitor from './visitors/arazzo-1/SelectorValueVisitor.ts';
 import ExpressionTypeValueVisitor from './visitors/arazzo-1/ExpressionTypeValueVisitor.ts';
 import SpecificationExtensionVisitor from './visitors/SpecificationExtensionVisitor.ts';
 import FallbackVisitor from './visitors/FallbackVisitor.ts';
@@ -63,6 +64,7 @@ const { JSONSchema: JSONSchemaVisitor } = jsonSchemaSpecificationObj.visitors.do
 const specification = {
   visitors: {
     value: FallbackVisitor,
+    selectorValue: SelectorValueVisitor,
     document: {
       objects: {
         ArazzoSpecification: {
@@ -141,7 +143,7 @@ const specification = {
             in: { $ref: '#/visitors/value' },
             style: { $ref: '#/visitors/value' },
             target: { $ref: '#/visitors/value' },
-            value: { $ref: '#/visitors/value' },
+            value: { $ref: '#/visitors/selectorValue' },
           },
         },
         SuccessAction: {
@@ -198,7 +200,7 @@ const specification = {
           fixedFields: {
             target: { $ref: '#/visitors/value' },
             targetSelectorType: ExpressionTypeValueVisitor,
-            value: { $ref: '#/visitors/value' },
+            value: { $ref: '#/visitors/selectorValue' },
           },
         },
         Selector: {

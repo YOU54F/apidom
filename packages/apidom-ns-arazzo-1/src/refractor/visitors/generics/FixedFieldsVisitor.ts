@@ -10,6 +10,7 @@ import {
 
 import SpecificationVisitor, { SpecificationVisitorOptions } from '../SpecificationVisitor.ts';
 import { isArazzoSpecificationExtension } from '../../predicates.ts';
+import { fieldsSince, isAvailable } from '../../version.ts';
 
 /**
  * @public
@@ -59,7 +60,11 @@ class FixedFieldsVisitor extends SpecificationVisitor {
 
   ObjectElement(objectElement: ObjectElement) {
     const specPath = this.specPath(objectElement);
-    const fields = this.retrieveFixedFields(specPath);
+    const objectName = specPath[specPath.length - 1] as string;
+    const since = fieldsSince[objectName] ?? {};
+    const fields = this.retrieveFixedFields(specPath).filter(
+      (field) => !since[field] || isAvailable(this.specVersion, since[field]),
+    );
 
     // @ts-ignore
     objectElement.forEach((value: Element, key: Element, memberElement: MemberElement) => {
