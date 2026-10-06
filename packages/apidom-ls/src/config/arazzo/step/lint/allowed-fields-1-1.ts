@@ -27,6 +27,7 @@ const lint: LinterMeta = {
       'outputs',
       'timeout',
       'correlationId',
+      'dependsOn',
     ],
     'x-',
   ],

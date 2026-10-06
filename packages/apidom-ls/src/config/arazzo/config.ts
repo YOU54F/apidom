@@ -45,7 +45,7 @@ export default {
   parameter: withSpecLints('parameter', parameterMeta),
   successAction: withSpecLints('successAction', successActionMeta),
   failureAction: withSpecLints('failureAction', failureActionMeta),
-  components: componentsMeta,
+  components: withSpecLints('components', componentsMeta),
   criterion: withSpecLints('criterion', criterionMeta),
   requestBody: withSpecLints('requestBody', requestBodyMeta),
   payloadReplacement: withSpecLints('payloadReplacement', payloadReplacementMeta),

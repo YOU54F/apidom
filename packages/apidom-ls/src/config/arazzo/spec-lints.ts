@@ -2,7 +2,7 @@ import { DiagnosticSeverity } from 'vscode-languageserver-types';
 
 import ApilintCodes from '../codes.ts';
 import { LinterMeta } from '../../apidom-language-types.ts';
-import { ARAZZO1, ARAZZO10, ARAZZO11 } from './target-specs.ts';
+import { ARAZZO10, ARAZZO11, ARAZZO1 } from './target-specs.ts';
 import skipReusableObjects from './skip-reusable.ts';
 
 const { Error: ERROR, Warning: WARNING } = DiagnosticSeverity;
@@ -58,7 +58,55 @@ const expressionLints = (target: string): LinterMeta[] => [
     linterFunction: 'arazzoExpressionInputDeclared',
     target,
   }),
+  lint({
+    code: ApilintCodes.ARAZZO1_EXPRESSION_VERSION_NOT_AVAILABLE,
+    message: "'$self' and '$message' runtime expressions are available from Arazzo 1.1.0",
+    linterFunction: 'arazzoExpressionAvailableFrom11',
+    target,
+    targetSpecs: ARAZZO10,
+  }),
 ];
+
+const outputsSelectorLint = (): LinterMeta =>
+  lint({
+    code: ApilintCodes.ARAZZO1_SELECTOR_INCOMPLETE,
+    message: "A Selector Object requires both 'context' and 'selector'",
+    linterFunction: 'arazzoSelectorIncomplete',
+    linterParams: [true],
+    target: 'outputs',
+    targetSpecs: ARAZZO11,
+  });
+
+const valueSelectorLint = (): LinterMeta =>
+  lint({
+    code: ApilintCodes.ARAZZO1_SELECTOR_INCOMPLETE,
+    message: "A Selector Object requires both 'context' and 'selector'",
+    linterFunction: 'arazzoSelectorIncomplete',
+    target: 'value',
+    targetSpecs: ARAZZO11,
+  });
+
+const keyPattern = '^[a-zA-Z0-9\\.\\-_]+$';
+
+const componentsKeyLint = (target: string): LinterMeta =>
+  lint({
+    code: ApilintCodes.ARAZZO1_COMPONENTS_KEY_PATTERN,
+    message: `'${target}' names must match ^[a-zA-Z0-9.\\-_]+$`,
+    linterFunction: 'apilintKeysRegex',
+    linterParams: [keyPattern],
+    target,
+  });
+
+// Expression Type Object versions per specification version
+const EXPRESSION_VERSIONS_10 = {
+  jsonpath: ['draft-goessner-dispatch-jsonpath-00'],
+  xpath: ['xpath-30', 'xpath-20', 'xpath-10'],
+};
+const EXPRESSION_VERSIONS_11 = {
+  jsonpath: ['rfc9535', 'draft-goessner-dispatch-jsonpath-00'],
+  xpath: ['xpath-31', 'xpath-30', 'xpath-20', 'xpath-10'],
+  jsonpointer: ['rfc6901'],
+};
 
 const idPattern = '^[A-Za-z0-9_\\-]+$';
 
@@ -87,7 +135,23 @@ const actionLints = (): LinterMeta[] => [
 ];
 
 const specLints: Record<string, LinterMeta[]> = {
+  components: [
+    componentsKeyLint('inputs'),
+    componentsKeyLint('parameters'),
+    componentsKeyLint('successActions'),
+    componentsKeyLint('failureActions'),
+  ],
   arazzoSpecification1: [
+    // no targetSpecs: this must run for versions that no other rule recognises
+    lint({
+      code: ApilintCodes.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_ARAZZO_VERSION_UNKNOWN,
+      message:
+        'Unknown Arazzo version, supported versions are 1.0.0, 1.0.1 and 1.1.0; version specific rules are not applied',
+      severity: WARNING,
+      linterFunction: 'arazzoKnownVersion',
+      target: 'arazzo',
+      targetSpecs: undefined,
+    }),
     lint({
       code: ApilintCodes.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_SOURCE_DESCRIPTIONS_MIN_ITEMS,
       message: "'sourceDescriptions' must contain at least one item",
@@ -175,6 +239,7 @@ const specLints: Record<string, LinterMeta[]> = {
       target: 'outputs',
       targetSpecs: ARAZZO11,
     }),
+    outputsSelectorLint(),
     ...expressionLints('outputs'),
     ...expressionLints('dependsOn'),
   ],
@@ -247,6 +312,21 @@ const specLints: Record<string, LinterMeta[]> = {
       target: 'outputs',
       targetSpecs: ARAZZO11,
     }),
+    outputsSelectorLint(),
+    lint({
+      code: ApilintCodes.ARAZZO1_STEP_ACTION_NOT_APPLICABLE,
+      message: "'action' is only applicable to steps that target an AsyncAPI operation or channel",
+      linterFunction: 'arazzoStepActionApplicable',
+      marker: 'key',
+      targetSpecs: ARAZZO11,
+    }),
+    lint({
+      code: ApilintCodes.ARAZZO1_STEP_CORRELATION_ID_NOT_APPLICABLE,
+      message: "'correlationId' is only applicable to AsyncAPI steps with action 'receive'",
+      linterFunction: 'arazzoStepCorrelationIdApplicable',
+      marker: 'key',
+      targetSpecs: ARAZZO11,
+    }),
     ...[
       'operationId',
       'operationPath',
@@ -272,6 +352,7 @@ const specLints: Record<string, LinterMeta[]> = {
       linterFunction: 'arazzoParameterValueType',
       target: 'value',
     }),
+    valueSelectorLint(),
     ...expressionLints('value'),
   ],
   criterion: [
@@ -310,6 +391,7 @@ const specLints: Record<string, LinterMeta[]> = {
       target: 'targetSelectorType',
       targetSpecs: ARAZZO11,
     }),
+    valueSelectorLint(),
     ...expressionLints('value'),
   ],
   selector: [
@@ -326,13 +408,34 @@ const specLints: Record<string, LinterMeta[]> = {
       code: ApilintCodes.ARAZZO1_EXPRESSION_TYPE_FIELD_TYPE_ENUM,
       message: "'type' must be one of jsonpath, xpath",
       linterFunction: 'arazzoExpressionTypeTypeValid',
+      linterParams: [['jsonpath', 'xpath']],
       target: 'type',
+      targetSpecs: ARAZZO10,
+    }),
+    lint({
+      code: ApilintCodes.ARAZZO1_EXPRESSION_TYPE_FIELD_TYPE_ENUM,
+      message: "'type' must be one of jsonpath, xpath, jsonpointer",
+      linterFunction: 'arazzoExpressionTypeTypeValid',
+      linterParams: [['jsonpath', 'xpath', 'jsonpointer']],
+      target: 'type',
+      targetSpecs: ARAZZO11,
+    }),
+    lint({
+      code: ApilintCodes.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
+      message:
+        "'version' is not valid for the given 'type' in this Arazzo version (rfc9535, xpath-31 and rfc6901 require 1.1.0)",
+      linterFunction: 'arazzoExpressionTypeVersionValid',
+      linterParams: [EXPRESSION_VERSIONS_10],
+      target: 'version',
+      targetSpecs: ARAZZO10,
     }),
     lint({
       code: ApilintCodes.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
       message: "'version' is not valid for the given 'type'",
       linterFunction: 'arazzoExpressionTypeVersionValid',
+      linterParams: [EXPRESSION_VERSIONS_11],
       target: 'version',
+      targetSpecs: ARAZZO11,
     }),
   ],
   successAction: actionLints(),

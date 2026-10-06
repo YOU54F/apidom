@@ -85,6 +85,36 @@ export enum ProviderMode {
 export const APIDOM_LINTER = 'apilint';
 
 /**
+ * Describes a Source Description of an Arazzo document, handed to a {@link SourceDocumentProvider}.
+ * @public
+ */
+export interface ArazzoSourceRequest {
+  /** `name` of the Source Description */
+  name: string;
+  /** `url` of the Source Description, as written in the Arazzo document */
+  url: string;
+  /** declared `type` (`openapi`, `asyncapi`, `arazzo`), if any */
+  type?: string;
+  /** uri of the Arazzo document being validated */
+  documentUri: string;
+}
+
+/**
+ * Supplies the content of a Source Description document (text in JSON or YAML, or an already parsed
+ * object). Return `undefined` (or throw) when the document is not available: no source checks are
+ * reported for a source that is not loaded.
+ * @public
+ */
+export type SourceDocumentProvider = (
+  source: ArazzoSourceRequest,
+  signal?: AbortSignal,
+) =>
+  | Promise<string | Record<string, unknown> | undefined>
+  | string
+  | Record<string, unknown>
+  | undefined;
+
+/**
  * @public
  */
 export interface LanguageServiceContext {
@@ -109,6 +139,7 @@ export interface LanguageServiceContext {
   linksContext?: LinksContext;
   refractorPlugins?: RefractorPlugins;
   referenceOptions?: ApiDOMReferenceOptions;
+  sourceDocuments?: SourceDocumentProvider;
 }
 
 /**
@@ -319,6 +350,7 @@ export interface LanguageSettings {
   colorsContext?: ColorsContext;
   linksContext?: LinksContext;
   referenceOptions?: ApiDOMReferenceOptions;
+  sourceDocuments?: SourceDocumentProvider;
 }
 
 // export type SeverityLevel = 'error' | 'warning' | 'ignore';

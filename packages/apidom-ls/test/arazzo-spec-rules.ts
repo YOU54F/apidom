@@ -17,10 +17,10 @@ import { logPerformance, logLevel } from './test-utils.ts';
  * that the language service checks. Every rule has a document that must produce no diagnostic
  * at all and a document that must produce the rule's code.
  *
- * Rules the language service cannot check: resolving `operationId`, `operationPath` and
- * `channelPath` against the fetched source descriptions (the documents are not available to
- * the linter), whether a step's `action` is coherent with its target, and a missing `arazzo` field (without it the
- * document is not recognised as an Arazzo document, so no Arazzo rule runs).
+ * Resolving `operationId`, `operationPath`, `channelPath` and `workflowId` against the loaded
+ * source documents is covered separately (test/arazzo-sources.ts); it only reports when a source
+ * document has been supplied. A missing or malformed `arazzo` field cannot be reported: without a
+ * 1.x.y version the document is not recognised as an Arazzo document, so no Arazzo rule runs.
  */
 
 interface DocOptions {
@@ -74,6 +74,10 @@ const C = ApilintCodes;
 const OP = 'operationId: op';
 const ONE_STEP_WITH = (extra: string, o: DocOptions = {}) => step(`${OP}\n${extra}`, o);
 const V11: DocOptions = { ver: '1.1.0' };
+/** a step targeting an AsyncAPI channel */
+const CH = (extra: string, o: DocOptions = {}) =>
+  doc({ ...o, steps: `- stepId: s1\n  channelPath: ch\n${indent(extra, 2)}` });
+const ASYNC_SRC = '  - name: ev\n    url: https://example.com/asyncapi.json\n    type: asyncapi';
 
 // ---------------------------------------------------------------- required fields
 rule(
@@ -191,8 +195,8 @@ rule(
   ONE_STEP_WITH('requestBody:\n  replacements:\n    - target: /a'),
 );
 rule(
-  'Selector Object (1.1): context is required (reported as an invalid outputs value)',
-  C.ARAZZO1_OUTPUTS_VALUE_TYPE,
+  'Selector Object (1.1): context is required',
+  C.ARAZZO1_SELECTOR_INCOMPLETE,
   ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
   ONE_STEP_WITH('outputs:\n  o:\n    selector: /a', V11),
 );
@@ -243,8 +247,8 @@ rule(
 rule(
   'Step Object (1.1): action is send or receive',
   C.ARAZZO1_STEP_FIELD_ACTION_ENUM,
-  ONE_STEP_WITH('action: send', V11),
-  ONE_STEP_WITH('action: publish', V11),
+  CH('action: send', V11),
+  CH('action: publish', V11),
 );
 rule(
   'Parameter Object: in is path, query, header or cookie',
@@ -284,9 +288,10 @@ rule(
   ONE_STEP_WITH('successCriteria:\n  - condition: ^2\n    context: $statusCode\n    type: regex'),
   ONE_STEP_WITH('successCriteria:\n  - condition: ^2\n    type: regex'),
 );
-const ET = (body: string) =>
+const ET = (body: string, o: DocOptions = {}) =>
   ONE_STEP_WITH(
     `successCriteria:\n  - condition: $[0]\n    context: $response.body\n    type:\n${indent(body, 6)}`,
+    o,
   );
 rule(
   'Expression Type Object: type is jsonpath or xpath',
@@ -331,8 +336,8 @@ rule(
   ),
 );
 rule(
-  'Selector Object (1.1): selector is required (reported as an invalid outputs value)',
-  C.ARAZZO1_OUTPUTS_VALUE_TYPE,
+  'Selector Object (1.1): selector is required',
+  C.ARAZZO1_SELECTOR_INCOMPLETE,
   ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body\n    selector: /a', V11),
   ONE_STEP_WITH('outputs:\n  o:\n    context: $response.body', V11),
 );
@@ -782,12 +787,7 @@ rule(
   doc({ ver: '1.1.0', steps: '- stepId: s1\n  channelPath: ch' }),
   doc({ steps: '- stepId: s1\n  channelPath: ch' }),
 );
-rule(
-  'Step Object: action requires 1.1.0',
-  N,
-  ONE_STEP_WITH('action: send', V11),
-  ONE_STEP_WITH('action: send'),
-);
+rule('Step Object: action requires 1.1.0', N, CH('action: send', V11), CH('action: send'));
 rule(
   'Step Object: timeout requires 1.1.0',
   N,
@@ -797,14 +797,212 @@ rule(
 rule(
   'Step Object: correlationId requires 1.1.0',
   N,
-  ONE_STEP_WITH('correlationId: abc', V11),
-  ONE_STEP_WITH('correlationId: abc'),
+  CH('action: receive\ncorrelationId: abc', V11),
+  CH('action: receive\ncorrelationId: abc'),
 );
 rule(
   'Payload Replacement Object: targetSelectorType requires 1.1.0',
   N,
   PR('targetSelectorType: jsonpath', V11),
   PR('targetSelectorType: jsonpath'),
+);
+
+// ---------------------------------------------------------------- spec gaps and version gating
+const KEYED = (section: string, key: string, body: string) =>
+  doc({ top: `components:\n  ${section}:\n    ${key}:\n${indent(body, 6)}\n` });
+const PARAM_BODY = 'name: p\nin: query\nvalue: v';
+rule(
+  'Components Object: parameters names match ^[a-zA-Z0-9.-_]+$',
+  C.ARAZZO1_COMPONENTS_KEY_PATTERN,
+  KEYED('parameters', 'my.param-1_a', PARAM_BODY),
+  KEYED('parameters', '"bad key"', PARAM_BODY),
+);
+rule(
+  'Components Object: inputs names match ^[a-zA-Z0-9.-_]+$',
+  C.ARAZZO1_COMPONENTS_KEY_PATTERN,
+  KEYED('inputs', 'my_input', 'type: object'),
+  KEYED('inputs', '"bad/input"', 'type: object'),
+);
+rule(
+  'Components Object: successActions names match ^[a-zA-Z0-9.-_]+$',
+  C.ARAZZO1_COMPONENTS_KEY_PATTERN,
+  KEYED('successActions', 'done', 'name: done\ntype: end'),
+  KEYED('successActions', '"do ne"', 'name: done\ntype: end'),
+);
+rule(
+  'Components Object: failureActions names match ^[a-zA-Z0-9.-_]+$',
+  C.ARAZZO1_COMPONENTS_KEY_PATTERN,
+  KEYED('failureActions', 'stop', 'name: stop\ntype: end'),
+  KEYED('failureActions', '"st$op"', 'name: stop\ntype: end'),
+);
+rule(
+  'Arazzo Object: unknown 1.x versions are flagged',
+  C.ARAZZO1_ARAZZO_SPECIFICATION_FIELD_ARAZZO_VERSION_UNKNOWN,
+  doc({ ver: '1.0.0' }),
+  doc({ arazzo: '1.2.0' }),
+);
+rule(
+  'Step Object (1.1): action is not applicable to OpenAPI steps',
+  C.ARAZZO1_STEP_ACTION_NOT_APPLICABLE,
+  doc({
+    ver: '1.1.0',
+    srcs: srcsOf(ASYNC_SRC),
+    steps: '- stepId: s1\n  operationId: $sourceDescriptions.ev.placeOrder\n  action: send',
+  }),
+  ONE_STEP_WITH('action: send', V11),
+);
+rule(
+  'Step Object (1.1): action is not applicable to expression operationIds of OpenAPI sources',
+  C.ARAZZO1_STEP_ACTION_NOT_APPLICABLE,
+  CH('action: receive', V11),
+  doc({
+    ver: '1.1.0',
+    steps: '- stepId: s1\n  operationId: $sourceDescriptions.api.getPet\n  action: send',
+  }),
+);
+rule(
+  'Step Object (1.1): action is not applicable to workflowId steps',
+  C.ARAZZO1_STEP_ACTION_NOT_APPLICABLE,
+  doc({
+    ver: '1.1.0',
+    srcs: srcsOf(ASYNC_SRC),
+    steps: '- stepId: s1\n  operationId: ev\n  action: send',
+  }),
+  doc({ ver: '1.1.0', steps: '- stepId: s1\n  workflowId: wf\n  action: send' }),
+);
+rule(
+  'Step Object (1.1): action with an unknown source type is accepted',
+  C.ARAZZO1_STEP_ACTION_NOT_APPLICABLE,
+  doc({
+    ver: '1.1.0',
+    srcs: 'sourceDescriptions:\n  - name: x\n    url: https://example.com/x.json\n',
+    steps: '- stepId: s1\n  operationId: $sourceDescriptions.x.op\n  action: send',
+  }),
+  ONE_STEP_WITH('action: receive', V11),
+);
+rule(
+  'Step Object (1.1): correlationId requires action receive',
+  C.ARAZZO1_STEP_CORRELATION_ID_NOT_APPLICABLE,
+  CH('action: receive\ncorrelationId: abc', V11),
+  CH('action: send\ncorrelationId: abc', V11),
+);
+rule(
+  'Step Object (1.1): correlationId is not applicable to OpenAPI steps',
+  C.ARAZZO1_STEP_CORRELATION_ID_NOT_APPLICABLE,
+  doc({
+    ver: '1.1.0',
+    srcs: srcsOf(ASYNC_SRC),
+    steps: '- stepId: s1\n  operationId: $sourceDescriptions.ev.onOrder\n  correlationId: abc',
+  }),
+  ONE_STEP_WITH('correlationId: abc', V11),
+);
+rule(
+  'Step Object: dependsOn requires 1.1.0',
+  N,
+  ONE_STEP_WITH('dependsOn:\n  - s0', V11),
+  ONE_STEP_WITH('dependsOn:\n  - s0'),
+);
+rule(
+  'Parameter Object: in querystring requires 1.1.0',
+  C.ARAZZO1_PARAMETER_FIELD_IN_ENUM,
+  ONE_STEP_WITH('parameters:\n  - name: q\n    in: querystring\n    value: a=b', V11),
+  ONE_STEP_WITH('parameters:\n  - name: q\n    in: querystring\n    value: a=b'),
+);
+rule(
+  'Parameter Object (1.1): value Selector Object requires context and selector',
+  C.ARAZZO1_SELECTOR_INCOMPLETE,
+  ONE_STEP_WITH(
+    'parameters:\n  - name: p\n    in: query\n    value:\n      context: $response.body\n      selector: /a',
+    V11,
+  ),
+  ONE_STEP_WITH(
+    'parameters:\n  - name: p\n    in: query\n    value:\n      context: $response.body',
+    V11,
+  ),
+);
+rule(
+  'Payload Replacement Object (1.1): value Selector Object requires context and selector',
+  C.ARAZZO1_SELECTOR_INCOMPLETE,
+  ONE_STEP_WITH(
+    'requestBody:\n  replacements:\n    - target: /a\n      value:\n        context: $response.body\n        selector: /b',
+    V11,
+  ),
+  ONE_STEP_WITH(
+    'requestBody:\n  replacements:\n    - target: /a\n      value:\n        selector: /b',
+    V11,
+  ),
+);
+rule(
+  'Workflow Object (1.1): outputs Selector Object requires context and selector',
+  C.ARAZZO1_SELECTOR_INCOMPLETE,
+  doc({ ...V11, wf: 'outputs:\n  o:\n    context: $response.body\n    selector: /a' }),
+  doc({ ...V11, wf: 'outputs:\n  o:\n    selector: /a' }),
+);
+rule(
+  'Runtime expression: $self requires 1.1.0',
+  C.ARAZZO1_EXPRESSION_VERSION_NOT_AVAILABLE,
+  ONE_STEP_WITH('outputs:\n  o: $self', V11),
+  ONE_STEP_WITH('outputs:\n  o: $self'),
+);
+rule(
+  'Runtime expression: $message requires 1.1.0',
+  C.ARAZZO1_EXPRESSION_VERSION_NOT_AVAILABLE,
+  CH('action: receive\noutputs:\n  o: $message.payload#/id', V11),
+  CH('action: receive\noutputs:\n  o: $message.payload#/id'),
+);
+rule(
+  'Runtime expression: $message.header requires 1.1.0 in conditions',
+  C.ARAZZO1_EXPRESSION_VERSION_NOT_AVAILABLE,
+  ONE_STEP_WITH('successCriteria:\n  - condition: $message.header.type == 1', V11),
+  ONE_STEP_WITH('successCriteria:\n  - condition: $message.header.type == 1'),
+);
+rule(
+  'Expression Type Object: jsonpath version rfc9535 requires 1.1.0',
+  C.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
+  ET('type: jsonpath\nversion: rfc9535', V11),
+  ET('type: jsonpath\nversion: rfc9535'),
+);
+rule(
+  'Expression Type Object: xpath version xpath-31 requires 1.1.0',
+  C.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
+  ET('type: xpath\nversion: xpath-31', V11),
+  ET('type: xpath\nversion: xpath-31'),
+);
+rule(
+  'Expression Type Object: jsonpointer type requires 1.1.0',
+  C.ARAZZO1_EXPRESSION_TYPE_FIELD_TYPE_ENUM,
+  ET('type: jsonpointer\nversion: rfc6901', V11),
+  ET('type: jsonpointer\nversion: rfc6901'),
+);
+rule(
+  'Expression Type Object: jsonpointer only has version rfc6901',
+  C.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
+  ET('type: jsonpointer\nversion: rfc6901', V11),
+  ET('type: jsonpointer\nversion: rfc9535', V11),
+);
+rule(
+  'Expression Type Object (1.1): older versions remain valid',
+  C.ARAZZO1_EXPRESSION_TYPE_FIELD_VERSION_ENUM,
+  ET('type: jsonpath\nversion: draft-goessner-dispatch-jsonpath-00', V11),
+  ET('type: jsonpath\nversion: xpath-31', V11),
+);
+rule(
+  'Source Description Object: type asyncapi is 1.1.0 only (1.0.0)',
+  C.ARAZZO1_SOURCE_DESCRIPTION_FIELD_TYPE_ENUM,
+  doc({ ver: '1.1.0', srcs: srcsOf(ASYNC_SRC) }),
+  doc({ ver: '1.0.0', srcs: srcsOf(ASYNC_SRC) }),
+);
+rule(
+  'Step Object: timeout requires 1.1.0 (1.0.0)',
+  N,
+  ONE_STEP_WITH('timeout: 1000', V11),
+  ONE_STEP_WITH('timeout: 1000', { ver: '1.0.0' }),
+);
+rule(
+  'Arazzo Object: $self requires 1.1.0 (1.0.0)',
+  N,
+  doc({ ver: '1.1.0', top: '$self: https://example.com/a\n' }),
+  doc({ ver: '1.0.0', top: '$self: https://example.com/a\n' }),
 );
 
 describe('apidom-ls-arazzo-spec-rules', function () {

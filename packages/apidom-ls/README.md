@@ -16,6 +16,7 @@ via [npm CLI](https://docs.npmjs.com/cli) by running the following command:
 ## Supported specifications
 
 The ApiDOM Language Service fully supports the following API specifications:
+
 - OpenAPI 2.0
 - OpenAPI 3.0.x
 - OpenAPI 3.1.0
@@ -47,10 +48,35 @@ Highlights:
 - Type lints for polymorphic fields: `parameter.value`, `requestBody.payload`, `criterion.type` (string or Expression
   Type Object) and outputs values (string, or Selector from 1.1).
 
-Spec-rule coverage lives in `test/arazzo-spec-rules.ts` (one valid and one invalid case per rule). Known limits: the
-service has no access to `sourceDescriptions` documents, so `operationId`, `operationPath` and `channelPath` are not
-resolved against them; the `action`/`channelPath` coupling is not enforced; the `components` key pattern and the
-`arazzo` version value are not linted.
+- Version gating: constructs introduced in 1.1.0 (`$self`, `dependsOn`, `$message.*` expressions, the `querystring`
+  parameter location, Selector Objects, the `jsonpointer` expression type and the `rfc9535`, `xpath-31`, `rfc6901`
+  Expression Type versions) are reported when the declared `arazzo` version is 1.0.x. An unknown 1.x version
+  produces a warning and skips the version-gated lints. Documents whose `arazzo` value is not `1.x.y` are not
+  recognised as Arazzo and get no Arazzo diagnostics.
+- `components` keys must match `^[a-zA-Z0-9\.\-_]+$`; `action` and `correlationId` are only applicable to AsyncAPI
+  steps (`correlationId` only with `action: receive`); a Selector Object missing `context` or `selector` has its own code.
+
+Spec-rule coverage lives in `test/arazzo-spec-rules.ts` (one valid and one invalid case per rule).
+
+### Source checks
+
+`operationId`, `operationPath`, `channelPath` and `workflowId` (in other Arazzo sources) can be checked against the
+documents listed in `sourceDescriptions`. The language service does not fetch anything itself; supply a
+`sourceDocuments` provider in the context. It receives `{ name, url, type, documentUri }` and returns the document as
+JSON/YAML text or an already parsed object (sync or async):
+
+```js
+const languageService = getLanguageService({
+  sourceDocuments: async ({ url }) => readOrFetch(url),
+});
+```
+
+Supported forms: `$sourceDescriptions.<name>.<operationId>`, a bare `operationId` when there is a single source,
+`operationPath` / `channelPath` as `{$sourceDescriptions.<name>.url}#/json/pointer`, and
+`$sourceDescriptions.<name>.<workflowId>` for Arazzo sources. Errors are only reported for a source that was loaded:
+with no provider, or when it returns `undefined`, throws or returns unparsable content, nothing is reported for that
+source. Covered by `test/arazzo-sources.ts`. Not checked: bare `workflowId`s resolved across documents other than via
+`$sourceDescriptions`, and `operationId`s reached through `$ref` in the source.
 
 ## Quick start
 
@@ -68,11 +94,7 @@ The capabilities of the ApiDOM Language Service can be extended by providing cus
 ```ts
 import { DocumentLink } from 'vscode-languageserver-types';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import {
-  Element,
-  MemberElement,
-  isStringElement,
-} from "@swagger-api/apidom-core";
+import { Element, MemberElement, isStringElement } from '@swagger-api/apidom-core';
 import { InfoElement } from '@swagger-api/apidom-ns-asyncapi-2';
 import { getLanguageService, LinksProvider, config } from '@swagger-api/apidom-ls';
 import type {
@@ -180,14 +202,14 @@ const camelCaseTitle = {
 
 const versionEquals = {
   code: 70202,
-  source: "apilint",
-  message: "version must be equal to one of the specified values",
+  source: 'apilint',
+  message: 'version must be equal to one of the specified values',
   severity: 1,
-  linterFunction: "apilintEqualsCustom",
-  linterParams: ["1.0.0", "2.0.0"],
-  given: "$.info.version",
-  givenFormat: "JSONPATH",
-  marker: "value",
+  linterFunction: 'apilintEqualsCustom',
+  linterParams: ['1.0.0', '2.0.0'],
+  given: '$.info.version',
+  givenFormat: 'JSONPATH',
+  marker: 'value',
   data: {},
 };
 
@@ -202,10 +224,7 @@ customMetadata.rules = {
 const refractorPlugin = () => () => ({
   visitor: {
     MemberElement(element: MemberElement) {
-      if (
-        isStringElement(element.key) &&
-        element.key.equals("additionalInfo")
-      ) {
+      if (isStringElement(element.key) && element.key.equals('additionalInfo')) {
         element.value = InfoElement.refract(element.value);
       }
     },
@@ -221,7 +240,7 @@ const customContext = {
   linksProviders: [refLinksProvider],
   refractorPlugins: {
     'asyncapi-2': [refractorPlugin()],
-  }
+  },
 };
 
 const languageService = getLanguageService(customContext);
@@ -748,11 +767,8 @@ const tokens = await languageService.computeSemanticTokens(document);
 ```json
 {
   "data": [
-     0,  0, 8, 14, 0,  1,  0, 10, 16,  0, 1, 2,
-     7, 18, 0,  1, 4,  9, 23,  0,  1,  6, 4, 3,
-    64,  0, 6,  6, 0, 64,  1,  6, 20, 23, 0, 1,
-     8,  4, 3, 64, 0,  6,  7,  0, 64,  1, 8, 6,
-     3, 64, 0,  8, 5,  0, 64
+    0, 0, 8, 14, 0, 1, 0, 10, 16, 0, 1, 2, 7, 18, 0, 1, 4, 9, 23, 0, 1, 6, 4, 3, 64, 0, 6, 6, 0, 64,
+    1, 6, 20, 23, 0, 1, 8, 4, 3, 64, 0, 6, 7, 0, 64, 1, 8, 6, 3, 64, 0, 8, 5, 0, 64
   ]
 }
 ```
@@ -793,25 +809,25 @@ const dereferenced = await languageService.doDeref(document);
 ```
 
 ```yaml
-"asyncapi": "2.6.0"
-"channels":
-  "petstore.inventory.added":
-    "publish":
-      "message":
-        "name": "Inventory"
-        "contentType": "application/json"
-        "payload":
-          "type": "object"
-          "additionalProperties":
-            "type": "integer"
-            "format": "int64"
-"components":
-  "schemas":
-    "Inventory":
-      "type": "object"
-      "additionalProperties":
-        "type": "integer"
-        "format": "int64"
+'asyncapi': '2.6.0'
+'channels':
+  'petstore.inventory.added':
+    'publish':
+      'message':
+        'name': 'Inventory'
+        'contentType': 'application/json'
+        'payload':
+          'type': 'object'
+          'additionalProperties':
+            'type': 'integer'
+            'format': 'int64'
+'components':
+  'schemas':
+    'Inventory':
+      'type': 'object'
+      'additionalProperties':
+        'type': 'integer'
+        'format': 'int64'
 ```
 
 ### JSON Pointer Position
