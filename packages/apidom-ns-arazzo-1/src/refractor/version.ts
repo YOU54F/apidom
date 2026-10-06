@@ -10,6 +10,7 @@ export const fieldsSince: Record<string, Record<string, string>> = {
     timeout: '1.1.0',
     correlationId: '1.1.0',
     action: '1.1.0',
+    dependsOn: '1.1.0',
   },
   PayloadReplacement: { targetSelectorType: '1.1.0' },
 };

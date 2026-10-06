@@ -46,7 +46,7 @@ declares an earlier version:
 | Object | Field | Since |
 | --- | --- | --- |
 | Arazzo Specification | `$self` | 1.1.0 |
-| Step | `channelPath`, `timeout`, `correlationId`, `action` | 1.1.0 |
+| Step | `channelPath`, `timeout`, `correlationId`, `action`, `dependsOn` | 1.1.0 |
 | Payload Replacement | `targetSelectorType` | 1.1.0 |
 
 Selector Objects (`context`, `selector`, optional `type`) refract to `SelectorElement` in step and workflow `outputs`,
