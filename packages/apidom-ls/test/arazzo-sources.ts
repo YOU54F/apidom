@@ -62,7 +62,56 @@ workflows:
         operationId: $sourceDescriptions.api.x
 `;
 
+const OPENAPI_REFS = JSON.stringify({
+  openapi: '3.0.3',
+  info: { title: 'Refs', version: '1' },
+  paths: {
+    '/local': { $ref: '#/components/pathItems/Local' },
+    '/remote': { $ref: 'paths/remote.json' },
+    '/gone': { $ref: 'paths/gone.json' },
+    '/dangling': { $ref: '#/components/pathItems/Nope' },
+  },
+  components: {
+    pathItems: { Local: { get: { operationId: 'localOp', responses: {} } } },
+  },
+});
+
+const OPENAPI_QS = JSON.stringify({
+  openapi: '3.2.0',
+  info: { title: 'QS', version: '1' },
+  paths: {
+    '/search': {
+      get: {
+        operationId: 'search',
+        parameters: [
+          { name: 'q', in: 'querystring', content: { 'application/x-www-form-urlencoded': {} } },
+        ],
+        responses: {},
+      },
+    },
+    '/data': {
+      get: {
+        operationId: 'data',
+        parameters: [{ name: 'q', in: 'querystring', content: { 'application/json': {} } }],
+        responses: {},
+      },
+    },
+    '/plain': {
+      get: {
+        operationId: 'plain',
+        parameters: [{ name: 'a', in: 'query', schema: { type: 'string' } }],
+        responses: {},
+      },
+    },
+  },
+});
+
 const DOCS: Record<string, string> = {
+  'https://example.com/refs.json': OPENAPI_REFS,
+  'https://example.com/paths/remote.json': JSON.stringify({
+    get: { operationId: 'remoteOp', responses: {} },
+  }),
+  'https://example.com/qs.json': OPENAPI_QS,
   'https://example.com/openapi.json': OPENAPI,
   'https://example.com/asyncapi2.yaml': ASYNCAPI2,
   'https://example.com/asyncapi3.yaml': ASYNCAPI3,
@@ -82,6 +131,8 @@ const arazzo = (sources: string, steps: string) =>
 const OA = src('pets', 'https://example.com/openapi.json', 'openapi');
 const AA2 = src('chat2', 'https://example.com/asyncapi2.yaml', 'asyncapi');
 const AA3 = src('chat3', 'https://example.com/asyncapi3.yaml', 'asyncapi');
+const REFS = src('refs', 'https://example.com/refs.json', 'openapi');
+const QS = src('qs', 'https://example.com/qs.json', 'openapi');
 const AZ = src('other', 'https://example.com/other.arazzo.yaml', 'arazzo');
 
 describe('apidom-ls-arazzo-sources', function () {
@@ -214,6 +265,197 @@ describe('apidom-ls-arazzo-sources', function () {
         await codes(arazzo(AZ, '- stepId: s1\n  workflowId: $sourceDescriptions.other.logout')),
         ApilintCodes.ARAZZO1_SOURCE_WORKFLOW_ID_NOT_FOUND,
       );
+    });
+  });
+
+  describe('$ref inside source documents', function () {
+    const op = (id: string) =>
+      arazzo(REFS, `- stepId: s1\n  operationId: $sourceDescriptions.refs.${id}`);
+    const nf = ApilintCodes.ARAZZO1_SOURCE_OPERATION_ID_NOT_FOUND;
+    it('follows a local fragment path-item $ref', async function () {
+      assert.deepEqual(await validate(op('localOp')), []);
+    });
+    it('follows a relative path-item $ref supplied by the provider', async function () {
+      assert.deepEqual(await validate(op('remoteOp')), []);
+    });
+    it('still reports an operationId that is nowhere', async function () {
+      // `paths/gone.json` is not available: the index is incomplete, so stay silent
+      assert.notInclude(await codes(op('nope')), nf);
+    });
+    it('is silent when a $ref cannot be followed', async function () {
+      assert.notInclude(await codes(op('inGoneDoc')), nf);
+    });
+    it('reports when every $ref resolved and the id is missing', async function () {
+      const service = getLanguageService({
+        ...context,
+        sourceDocuments: async ({ url }) =>
+          url === 'https://example.com/refs.json'
+            ? JSON.stringify({
+                openapi: '3.0.3',
+                info: { title: 'r', version: '1' },
+                paths: { '/a': { $ref: '#/components/pathItems/A' } },
+                components: { pathItems: { A: { get: { operationId: 'a', responses: {} } } } },
+              })
+            : DOCS[url],
+      });
+      try {
+        assert.include(await codes(op('missing'), service), nf);
+        assert.deepEqual(await validate(op('a'), service), []);
+      } finally {
+        service.terminate();
+      }
+    });
+    it('passes referencedFrom for a relative $ref', async function () {
+      const seen: Array<[string, string | undefined]> = [];
+      const service = getLanguageService({
+        ...context,
+        sourceDocuments: async (request) => {
+          seen.push([request.url, request.referencedFrom]);
+          return DOCS[request.url];
+        },
+      });
+      try {
+        await validate(op('remoteOp'), service);
+        assert.deepInclude(seen, [
+          'https://example.com/paths/remote.json',
+          'https://example.com/refs.json',
+        ]);
+      } finally {
+        service.terminate();
+      }
+    });
+    it('stays silent for cyclic path-item references', async function () {
+      const service = getLanguageService({
+        ...context,
+        sourceDocuments: async () => ({
+          openapi: '3.1.0',
+          paths: { '/cycle': { $ref: '#/paths/~1cycle' } },
+        }),
+      });
+      try {
+        assert.deepEqual(await validate(op('unknown'), service), []);
+      } finally {
+        service.terminate();
+      }
+    });
+  });
+
+  describe('querystring parameters', function () {
+    const step = (id: string, value: string, extra = '') =>
+      arazzo(
+        QS,
+        `- stepId: s1\n  operationId: $sourceDescriptions.qs.${id}\n  parameters:\n    - name: q\n      in: querystring\n      value: ${value}\n${extra}`,
+      );
+    const mismatch = ApilintCodes.ARAZZO1_SOURCE_QUERYSTRING_MEDIA_TYPE_MISMATCH;
+    const notDefined = ApilintCodes.ARAZZO1_SOURCE_QUERYSTRING_NOT_DEFINED;
+    it('resolves path-item parameters relative to their own document', async function () {
+      const service = getLanguageService({
+        ...context,
+        sourceDocuments: async ({ url }) => {
+          if (url === 'https://example.com/qs.json') {
+            return {
+              openapi: '3.2.0',
+              paths: {
+                '/search': {
+                  parameters: [{ $ref: '#/components/parameters/query' }],
+                  get: { $ref: 'operations/search.json' },
+                },
+              },
+              components: {
+                parameters: {
+                  query: { in: 'querystring', content: { 'application/json': {} } },
+                },
+              },
+            };
+          }
+          if (url === 'https://example.com/operations/search.json') {
+            return { operationId: 'search', responses: {} };
+          }
+          return undefined;
+        },
+      });
+      try {
+        const text = step('search', 'a=1');
+        const document = TextDocument.create('foo://bar/range.yaml', 'yaml', 0, text);
+        const offset = text.indexOf('a=1');
+        assert.deepEqual(await validate(text, service), [
+          {
+            range: {
+              start: document.positionAt(offset),
+              end: document.positionAt(offset + 3),
+            },
+            message:
+              "'querystring' value is not valid JSON (the operation's parameter content is application/json)",
+            severity: DiagnosticSeverity.Warning,
+            code: mismatch,
+            source: 'apilint',
+          },
+        ]);
+      } finally {
+        service.terminate();
+      }
+    });
+    it('accepts a value matching the media type', async function () {
+      assert.notInclude(await codes(step('search', 'a=1&b=2')), mismatch);
+      assert.notInclude(await codes(step('data', '\'{"a": 1}\'')), mismatch);
+    });
+    it('checks querystring content addressed through operationPath', async function () {
+      const text = step('data', '\'{"a": 1}\'').replace(
+        'operationId: $sourceDescriptions.qs.data',
+        "operationPath: '{$sourceDescriptions.qs.url}#/paths/~1data/get'",
+      );
+      assert.deepEqual(await validate(text), []);
+    });
+    it('reports JSON text for a form-urlencoded querystring', async function () {
+      const found = await validate(step('search', '\'{"a": 1}\''));
+      const d = found.find((x) => Number(x.code) === mismatch);
+      assert.isDefined(d);
+      assert.equal(d!.severity, DiagnosticSeverity.Warning);
+    });
+    it('reports invalid JSON for a JSON querystring', async function () {
+      assert.include(await codes(step('data', 'a=1')), mismatch);
+    });
+    it('does not judge runtime expressions', async function () {
+      assert.notInclude(await codes(step('data', '$inputs.q')), mismatch);
+    });
+    it('reports a querystring parameter the operation does not define', async function () {
+      assert.include(await codes(step('plain', 'a=1')), notDefined);
+    });
+    it('is silent when the operation is not resolved', async function () {
+      const service = getLanguageService({ ...context, sourceDocuments: async () => undefined });
+      try {
+        const found = await codes(step('search', '\'{"a": 1}\''), service);
+        assert.notInclude(found, mismatch);
+        assert.notInclude(found, notDefined);
+      } finally {
+        service.terminate();
+      }
+    });
+  });
+
+  describe('bare workflowId referring to an Arazzo source', function () {
+    it('requires the runtime expression form', async function () {
+      assert.include(
+        await codes(arazzo(AZ, '- stepId: s1\n  workflowId: login')),
+        ApilintCodes.ARAZZO1_SOURCE_WORKFLOW_ID_EXPRESSION_REQUIRED,
+      );
+    });
+    it('accepts a bare workflowId of the document itself', async function () {
+      assert.notInclude(
+        await codes(arazzo(AZ, '- stepId: s1\n  workflowId: wf')),
+        ApilintCodes.ARAZZO1_SOURCE_WORKFLOW_ID_EXPRESSION_REQUIRED,
+      );
+    });
+    it('stays silent when the other document is not loaded', async function () {
+      const service = getLanguageService({ ...context, sourceDocuments: async () => undefined });
+      try {
+        assert.notInclude(
+          await codes(arazzo(AZ, '- stepId: s1\n  workflowId: login'), service),
+          ApilintCodes.ARAZZO1_SOURCE_WORKFLOW_ID_EXPRESSION_REQUIRED,
+        );
+      } finally {
+        service.terminate();
+      }
     });
   });
 

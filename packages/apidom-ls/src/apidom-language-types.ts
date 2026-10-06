@@ -91,8 +91,14 @@ export const APIDOM_LINTER = 'apilint';
 export interface ArazzoSourceRequest {
   /** `name` of the Source Description */
   name: string;
-  /** `url` of the Source Description, as written in the Arazzo document */
+  /**
+   * `url` of the Source Description as written in the Arazzo document, or, when the request is for a
+   * document reached through a relative `$ref` inside a source, that reference resolved against
+   * the url of the referring document (no fragment). `referencedFrom` is set in that case.
+   */
   url: string;
+  /** url of the source document whose `$ref` led to this request; absent for the source itself */
+  referencedFrom?: string;
   /** declared `type` (`openapi`, `asyncapi`, `arazzo`), if any */
   type?: string;
   /** uri of the Arazzo document being validated */
