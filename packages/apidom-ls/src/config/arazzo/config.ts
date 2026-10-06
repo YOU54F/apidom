@@ -16,6 +16,13 @@ import selectorMeta from './selector/meta.ts';
 import expressionTypeMeta from './expression-type/meta.ts';
 import referenceMeta from './reference/meta.ts';
 import ApilintCodes from '../codes.ts';
+import specLints from './spec-lints.ts';
+import { FormatMeta } from '../../apidom-language-types.ts';
+
+const withSpecLints = (key: string, meta: FormatMeta): FormatMeta => ({
+  ...meta,
+  lint: [...(meta.lint ?? []), ...(specLints[key] ?? [])],
+});
 
 export default {
   '*': {
@@ -30,19 +37,19 @@ export default {
       },
     ],
   },
-  arazzoSpecification1: arazzoSpecificationMeta,
+  arazzoSpecification1: withSpecLints('arazzoSpecification1', arazzoSpecificationMeta),
   info: infoMeta,
-  sourceDescription: sourceDescriptionMeta,
-  workflow: workflowMeta,
-  step: stepMeta,
-  parameter: parameterMeta,
-  successAction: successActionMeta,
-  failureAction: failureActionMeta,
+  sourceDescription: withSpecLints('sourceDescription', sourceDescriptionMeta),
+  workflow: withSpecLints('workflow', workflowMeta),
+  step: withSpecLints('step', stepMeta),
+  parameter: withSpecLints('parameter', parameterMeta),
+  successAction: withSpecLints('successAction', successActionMeta),
+  failureAction: withSpecLints('failureAction', failureActionMeta),
   components: componentsMeta,
-  criterion: criterionMeta,
-  requestBody: requestBodyMeta,
-  payloadReplacement: payloadReplacementMeta,
-  selector: selectorMeta,
-  expressionType: expressionTypeMeta,
-  reference: referenceMeta,
+  criterion: withSpecLints('criterion', criterionMeta),
+  requestBody: withSpecLints('requestBody', requestBodyMeta),
+  payloadReplacement: withSpecLints('payloadReplacement', payloadReplacementMeta),
+  selector: withSpecLints('selector', selectorMeta),
+  expressionType: withSpecLints('expressionType', expressionTypeMeta),
+  reference: withSpecLints('reference', referenceMeta),
 };
