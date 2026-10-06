@@ -633,7 +633,7 @@ Available namespaces:
 
 - [A2A 1.0.0](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-a2a-1)
 - [API Design Systems](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-api-design-systems)
-- [Arazzo 1.0.1](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-arazzo-1)
+- [Arazzo 1.0.x, 1.1.0](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-arazzo-1)
 - [AsyncAPI 2.x.y](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-asyncapi-2)
 - [JSON Schema Draft 4/5](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-json-schema-draft-4)
 - [JSON Schema Draft 6](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-json-schema-draft-6)
@@ -654,7 +654,7 @@ Available parser adapters for ApiDOM namespaces:
 
 - A2A 1.0.0 - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-a2a-json-1) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-a2a-yaml-1)
 - API Design Systems - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-api-design-systems-json) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-api-design-systems-yaml)
-- Arazzo 1.0.1 - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-arazzo-json-1) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-arazzo-yaml-1)
+- Arazzo 1.0.x, 1.1.0 - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-arazzo-json-1) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-arazzo-yaml-1)
 - AsyncAPI 2.x.y - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-asyncapi-json-2) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-asyncapi-yaml-2)
 - AsyncAPI 3.x.y - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-asyncapi-json-3) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-asyncapi-yaml-3)
 - JSON Schema 2020-12 - [JSON](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-json-schema-json-2020-12) / [YAML](https://github.com/swagger-api/apidom/tree/main/packages/apidom-parser-adapter-json-schema-yaml-2020-12)
@@ -678,7 +678,7 @@ Available parse strategies:
 - ApiDOM - JSON
 - A2A 1.0.0 - JSON / YAML
 - API Design Systems - JSON / YAML
-- Arazzo 1.0.1 - JSON / YAML
+- Arazzo 1.0.x, 1.1.0 - JSON / YAML
 - AsyncAPI 2.x.y - JSON / YAML
 - OpenAPI 2.0 - JSON / YAML
 - OpenAPI 3.0.x - JSON / YAML

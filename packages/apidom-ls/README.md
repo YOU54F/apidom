@@ -21,6 +21,32 @@ The ApiDOM Language Service fully supports the following API specifications:
 - OpenAPI 3.1.0
 - AsyncAPI 2.x.y
 - AsyncAPI 3.x.y
+- Arazzo 1.0.x, 1.1.0 (see [Arazzo](#arazzo))
+
+## Arazzo
+
+Arazzo documents (JSON and YAML) get validation, completion, hover documentation and semantic tokens from the
+`arazzo-1` language config (`src/config/arazzo`). Codes are in the `ARAZZO1_*` range of `ApiDOM_LS_Code`
+(`9210000`+), one block per Arazzo object (Arazzo Specification, Info, Source Description, Workflow, Step, Parameter,
+Request Body, Payload Replacement, Criterion, Success/Failure Action, Reusable, Components, ...).
+
+Highlights:
+
+- Required fields and field types for every object, with enum checks (`sourceDescriptions[].type`, parameter `in`,
+  action `type`, criterion `type`, step `action`).
+- Version gating: fields introduced in 1.1.0 (`$self`, `channelPath`, `timeout`, `correlationId`, `action`,
+  `targetSelectorType`) are reported when the document declares an earlier `arazzo` version.
+- Step targets: a step must name exactly one of `operationId`, `operationPath`, `workflowId` or (1.1.0) `channelPath`.
+- Reference checks inside the document: `goto` targets, `dependsOn`, `$components.*` and `$steps`/`$workflows`
+  expressions that point at something that does not exist, and reusable `reference` values.
+- Runtime expressions are validated for syntax, and `$steps.x` / `$workflows.x` / `$inputs.x` are resolved against
+  the document.
+- Reusable Objects resolve `reference` (falling back to `$ref`) and the referenced component's value is taken into
+  account by schema rules.
+
+Spec-rule coverage lives in `test/arazzo-spec-rules.ts`. The service never fetches `sourceDescriptions`; checks that
+need the OpenAPI/AsyncAPI document (for example that an `operationId` exists) are only applied when that document is
+supplied through the host's dereferencing, otherwise they are skipped rather than guessed.
 
 ## Quick start
 

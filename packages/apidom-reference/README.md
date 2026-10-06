@@ -1193,7 +1193,7 @@ Every Reference object represents single external dependency.
 #### [External resolution strategies](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/resolve/strategies)
 
 External resolution strategy determines how a document is externally resolved. Depending on document `mediaType`
-every strategy differs significantly. Resolve component comes with two (2) default external resolution strategies.
+every strategy differs significantly. Resolve component comes with three (3) default external resolution strategies.
 
 ##### [apidom](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/resolve/strategies/apidom)
 
@@ -1207,6 +1207,14 @@ Supported media types:
   'application/vnd.apidom+json'
 ]
 ```
+
+##### [arazzo-1](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/resolve/strategies/arazzo-1)
+
+External resolution strategy for Arazzo documents. It can resolve whenever the `arazzo-1` dereference strategy can
+dereference the file. Besides internal Reusable Objects, it parses each `sourceDescriptions[].url` (relative to the
+Arazzo document) into the reference set, so `resolve()` returns the referenced OpenAPI, AsyncAPI or Arazzo documents.
+Source descriptions are skipped when `resolve.external` is `false`. An unreachable source description fails the run,
+like every other strategy.
 
 ##### [asyncapi-2](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/resolve/strategies/asyncapi-2)
 
@@ -1567,7 +1575,7 @@ const dereferenced = await dereferenceApiDOM(apidom, {
 #### [Dereference strategies](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/dereference/strategies)
 
 Dereference strategy determines how a document is internally or externally dereferenced. Depending on document `mediaType` option,
-every strategy differs significantly. `Dereference component` comes with four (4) default dereference strategies.
+every strategy differs significantly. `Dereference component` comes with five (5) default dereference strategies.
 
 #### [apidom](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/dereference/strategies/apidom)
 
@@ -1582,6 +1590,21 @@ Supported media types:
   'application/vnd.apidom',
   'application/vnd.apidom+json',
 ]
+```
+
+##### [arazzo-1](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/dereference/strategies/arazzo-1)
+
+Dereference strategy for Arazzo 1.x documents. It replaces Reusable Objects that point at
+`$components.parameters.<name>`, `$components.successActions.<name>` and `$components.failureActions.<name>` with the
+component. A Parameter's `value` next to its `reference` overrides the component's `value`. Components are cloned,
+never mutated. Runtime expressions that address operations (`$sourceDescriptions.x.operationId`) are not replaced.
+
+```js
+import { dereference } from '@swagger-api/apidom-reference';
+
+const result = await dereference('/path/to/workflows.arazzo.yaml', {
+  parse: { mediaType: 'application/vnd.oai.workflows+yaml;version=1.0.1' },
+});
 ```
 
 ##### [asyncapi-2](https://github.com/swagger-api/apidom/tree/main/packages/apidom-reference/src/dereference/strategies/asyncapi-2)

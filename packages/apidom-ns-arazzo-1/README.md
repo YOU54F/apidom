@@ -1,6 +1,6 @@
 # @swagger-api/apidom-ns-arazzo-1
 
-`@swagger-api/apidom-ns-arazzo-1` contains ApiDOM namespace specific to [Arazzo 1.0.1 specification](https://spec.openapis.org/arazzo/latest.html#version-1-0-1).
+`@swagger-api/apidom-ns-arazzo-1` contains ApiDOM namespace specific to [Arazzo 1.0.0, 1.0.1](https://spec.openapis.org/arazzo/v1.0.1.html) and [1.1.0](https://spec.openapis.org/arazzo/v1.1.0.html) specifications.
 
 ## Installation
 
@@ -10,9 +10,9 @@ You can install this package via [npm CLI](https://docs.npmjs.com/cli) by runnin
  $ npm install @swagger-api/apidom-ns-arazzo-1
 ```
 
-## Arazzo 1.0.1 namespace
+## Arazzo 1.x namespace
 
-Arazzo 1.0.1 namespace consists of [number of elements](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-arazzo-1/src/elements) implemented on top
+Arazzo 1.x namespace consists of [number of elements](https://github.com/swagger-api/apidom/tree/main/packages/apidom-ns-arazzo-1/src/elements) implemented on top
 of [primitive ones](https://github.com/refractproject/minim/tree/master/lib/primitives).
 
 ```js
@@ -36,6 +36,33 @@ import { ArazzoSpecification1Element, InfoElement } from '@swagger-api/apidom-ns
 const infoElement = new InfoElement();
 const arazzoElement = new ArazzoSpecification1Element();
 ```
+
+## Specification versions
+
+There is one namespace for all 1.x versions. The root refractor reads the document's `arazzo` field and passes it to
+every visitor as `specVersion`. Fields introduced after 1.0 are treated as unknown (plain) members when the document
+declares an earlier version:
+
+| Object | Field | Since |
+| --- | --- | --- |
+| Arazzo Specification | `$self` | 1.1.0 |
+| Step | `channelPath`, `timeout`, `correlationId`, `action` | 1.1.0 |
+| Payload Replacement | `targetSelectorType` | 1.1.0 |
+
+Selector Objects (`context`, `selector`, optional `type`) refract to `SelectorElement` in step and workflow `outputs`,
+Parameter `value` and Payload Replacement `value` for 1.1.0 and later only. The version table is exported as
+`fieldsSince` and `isAvailable(version, since)`.
+
+Notes:
+
+- A missing or unparsable `arazzo` value gates nothing.
+- Gating applies when refracting a whole document. Refracting a bare element (for example `StepElement.refract`) has
+  no root, so nothing is gated.
+- Reusable Objects use `reference` (with an optional `value`). `$ref` is still read as a fallback.
+- Criterion `type` and Payload Replacement `targetSelectorType` accept a string or a Criterion Expression Type Object.
+- Non-spec fields kept for compatibility: `operationRef`, `style`, `target`.
+- The media types exported by this package list 1.0.0 and 1.0.1 only; 1.1.0 documents are detected from the
+  `arazzo` field.
 
 ## Predicates
 
@@ -197,6 +224,8 @@ Only fully implemented specification objects should be checked here.
 - [x] [Reusable Object](https://spec.openapis.org/arazzo/latest.html#reusable-object)
 - [x] [Criterion Object](https://spec.openapis.org/arazzo/latest.html#criterion-object)
 - [x] [Criterion Expression Type Object](https://spec.openapis.org/arazzo/latest.html#criterion-expression-type-object)
+- [x] [Payload Replacement Object](https://spec.openapis.org/arazzo/latest.html#payload-replacement-object)
+- [x] Selector Object (1.1.0)
 - [x] [Request Body Object](https://spec.openapis.org/arazzo/latest.html#request-body-object)
 - [x] [Reusable Object](https://spec.openapis.org/arazzo/latest.html#reusable-object)
 - [x] [JSON Schema](https://json-schema.org/specification-links#2020-12)
