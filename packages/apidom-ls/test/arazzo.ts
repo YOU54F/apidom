@@ -51,6 +51,20 @@ describe('apidom-ls-arazzo', function () {
     assert.deepEqual(await validate('valid-1.1.0.json', 'json'), []);
   });
 
+  it('accepts the 1.1.0 AsyncAPI sample', async function () {
+    this.timeout(10000);
+    assert.deepEqual(await validate('valid-1.1.0-asyncapi.yaml', 'yaml'), []);
+  });
+
+  it('rejects the asyncapi source description type below 1.1', async function () {
+    this.timeout(10000);
+    const result = await validate('invalid-1.0.1-asyncapi-source.yaml', 'yaml');
+    assert.deepEqual(
+      result.map((d) => d.message),
+      ["'type' must be one of allowed values: openapi, arazzo"],
+    );
+  });
+
   it('does not apply parameter and action rules to Reusable Objects or valid references', async function () {
     this.timeout(10000);
     assert.deepEqual(await validate('reusable-objects.yaml', 'yaml'), []);
