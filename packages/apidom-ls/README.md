@@ -32,21 +32,25 @@ Request Body, Payload Replacement, Criterion, Success/Failure Action, Reusable, 
 
 Highlights:
 
-- Required fields and field types for every object, with enum checks (`sourceDescriptions[].type`, parameter `in`,
-  action `type`, criterion `type`, step `action`).
-- Version gating: fields introduced in 1.1.0 (`$self`, `channelPath`, `timeout`, `correlationId`, `action`,
-  `targetSelectorType`) are reported when the document declares an earlier `arazzo` version.
-- Step targets: a step must name exactly one of `operationId`, `operationPath`, `workflowId` or (1.1.0) `channelPath`.
-- Reference checks inside the document: `goto` targets, `dependsOn`, `$components.*` and `$steps`/`$workflows`
-  expressions that point at something that does not exist, and reusable `reference` values.
-- Runtime expressions are validated for syntax, and `$steps.x` / `$workflows.x` / `$inputs.x` are resolved against
-  the document.
-- Reusable Objects resolve `reference` (falling back to `$ref`) and the referenced component's value is taken into
-  account by schema rules.
+- Required fields, minimum item counts and field types for every object, with enum checks (`sourceDescriptions[].type`,
+  parameter `in`, action `type`, criterion `type`).
+- Version gating: 1.1.0-only fields (`$self`, `channelPath`, `action`, `timeout`, `correlationId`,
+  `targetSelectorType`) and Selector Objects are reported when the document declares an earlier `arazzo` version.
+- A step must name exactly one of `operationId`, `operationPath`, `workflowId` or (1.1.0) `channelPath`.
+- Uniqueness (steps, workflows, source names, parameters, actions), id and output-key patterns, `dependsOn` items,
+  action `goto`/`end`/`retry` rules, non-negative `retryAfter`/`retryLimit`, and `criterion.context` when `type` is set.
+- Cross references inside the document: `goto` and `dependsOn` targets and Reusable `reference` values.
+- Runtime expressions (`ARAZZO1_EXPRESSION_*`): `$steps.<id>` must exist in the workflow (error) and
+  `.outputs.<name>` must be declared (warning); `$workflows`, `$sourceDescriptions` and `$components` targets must
+  exist; `$inputs.<name>` is checked when the workflow declares `inputs.properties`. Embedded `{$...}` expressions and
+  criterion conditions are scanned.
+- Type lints for polymorphic fields: `parameter.value`, `requestBody.payload`, `criterion.type` (string or Expression
+  Type Object) and outputs values (string, or Selector from 1.1).
 
-Spec-rule coverage lives in `test/arazzo-spec-rules.ts`. The service never fetches `sourceDescriptions`; checks that
-need the OpenAPI/AsyncAPI document (for example that an `operationId` exists) are only applied when that document is
-supplied through the host's dereferencing, otherwise they are skipped rather than guessed.
+Spec-rule coverage lives in `test/arazzo-spec-rules.ts` (one valid and one invalid case per rule). Known limits: the
+service has no access to `sourceDescriptions` documents, so `operationId`, `operationPath` and `channelPath` are not
+resolved against them; the `action`/`channelPath` coupling is not enforced; the `components` key pattern and the
+`arazzo` version value are not linted.
 
 ## Quick start
 
