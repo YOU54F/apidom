@@ -996,6 +996,7 @@ export class DefaultValidationService implements ValidationService {
               textDocument,
               this.settings.sourceDocuments,
               context?.signal,
+              this.settings.referenceOptions?.resolve?.baseURI,
             )),
           );
         } catch (e) {

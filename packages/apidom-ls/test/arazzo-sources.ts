@@ -348,6 +348,35 @@ describe('apidom-ls-arazzo-sources', function () {
       );
     const mismatch = ApilintCodes.ARAZZO1_SOURCE_QUERYSTRING_MEDIA_TYPE_MISMATCH;
     const notDefined = ApilintCodes.ARAZZO1_SOURCE_QUERYSTRING_NOT_DEFINED;
+    it('uses operation parameters overriding the same path-item parameter', async function () {
+      const service = getLanguageService({
+        ...context,
+        sourceDocuments: async () => ({
+          openapi: '3.2.0',
+          paths: {
+            '/search': {
+              parameters: [{ name: 'q', in: 'querystring', content: { 'application/json': {} } }],
+              get: {
+                operationId: 'search',
+                parameters: [
+                  {
+                    name: 'q',
+                    in: 'querystring',
+                    content: { 'application/x-www-form-urlencoded': {} },
+                  },
+                ],
+                responses: {},
+              },
+            },
+          },
+        }),
+      });
+      try {
+        assert.deepEqual(await validate(step('search', 'a=1'), service), []);
+      } finally {
+        service.terminate();
+      }
+    });
     it('resolves path-item parameters relative to their own document', async function () {
       const service = getLanguageService({
         ...context,

@@ -69,6 +69,12 @@ Spec-rule coverage lives in `test/arazzo-spec-rules.ts` (one valid and one inval
 
 ### Source checks
 
+Arazzo completion and hover use the same source loader and reference-aware target index as validation. Completion
+offers local workflow/step IDs, runtime references (including declared step outputs and workflow inputs), and source
+operation/workflow IDs in JSON and YAML. Source operation suggestions and hover show method, path and summary when
+available. Unavailable sources are omitted without inventing targets. `referenceOptions.resolve.baseURI` supplies
+the base for relative source URLs when the text document's URI is not its real location.
+
 `operationId`, `operationPath`, `channelPath` and `workflowId` (in other Arazzo sources) can be checked against the
 documents listed in `sourceDescriptions`. The language service does not fetch anything itself; supply a
 `sourceDocuments` provider in the context. It receives `{ name, url, type, documentUri, referencedFrom? }` and returns the document as

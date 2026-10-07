@@ -109,18 +109,20 @@ class Resolver {
     private provider: SourceDocumentProvider,
     private documentUri: string,
     private signal?: AbortSignal,
+    private baseURI?: string,
   ) {}
 
   private absolute(url: string, base?: string): string {
     try {
-      return new URL(url, base ? this.absolute(base) : this.documentUri).href;
+      return new URL(url, base ? this.absolute(base) : (this.baseURI ?? this.documentUri)).href;
     } catch {
       return url;
     }
   }
 
   async loadSource(name: string, url: string, type?: string): Promise<Doc | undefined> {
-    return this.load(name, url, type, url);
+    const requestURL = this.baseURI ? this.absolute(url) : url;
+    return this.load(name, requestURL, type, requestURL);
   }
 
   private load(
@@ -191,6 +193,8 @@ class Resolver {
 
 interface OperationEntry {
   op: Dict;
+  method?: string;
+  path?: string;
   /** resolved parameters (path item + operation); undefined when one could not be resolved */
   parameters: Dict[] | undefined;
 }
@@ -212,7 +216,15 @@ const parametersOf = async (
     for (const raw of list) {
       const p = await resolver.deref({ node: raw, doc }, name);
       if (!p) return undefined;
-      if (isDict(p.node)) out.push(p.node);
+      if (isDict(p.node)) {
+        const parameter = p.node;
+        const previous =
+          typeof parameter.name === 'string' && typeof parameter.in === 'string'
+            ? out.findIndex((entry) => entry.name === parameter.name && entry.in === parameter.in)
+            : -1;
+        if (previous === -1) out.push(parameter);
+        else out[previous] = parameter;
+      }
     }
   }
   return out;
@@ -229,7 +241,7 @@ const indexOperations = async (
 
   const fromPathItems = async (container: unknown) => {
     if (!isDict(container)) return;
-    for (const raw of Object.values(container)) {
+    for (const [path, raw] of Object.entries(container)) {
       const item = await resolver.deref({ node: raw, doc: source.doc }, name);
       if (!item) {
         incomplete = true;
@@ -237,11 +249,14 @@ const indexOperations = async (
       }
       if (!isDict(item.node)) continue;
       const pathItem = item.node;
-      const operations: unknown[] = HTTP_METHODS.map((m) => pathItem[m]);
+      const operations: Array<[string, unknown]> = HTTP_METHODS.map((method) => [
+        method,
+        pathItem[method],
+      ]);
       if (isDict(pathItem.additionalOperations)) {
-        operations.push(...Object.values(pathItem.additionalOperations));
+        operations.push(...Object.entries(pathItem.additionalOperations));
       }
-      for (const rawOp of operations) {
+      for (const [method, rawOp] of operations) {
         const op = await resolver.deref({ node: rawOp, doc: item.doc }, name);
         if (!op) {
           incomplete = true;
@@ -254,7 +269,12 @@ const indexOperations = async (
             { doc: item.doc, parameters: pathItem.parameters },
             { doc: op.doc, parameters: op.node.parameters },
           );
-          ops.set(op.node.operationId, { op: op.node, parameters });
+          ops.set(op.node.operationId, {
+            op: op.node,
+            parameters,
+            method: method.toUpperCase(),
+            path,
+          });
         }
       }
     }
@@ -311,6 +331,79 @@ const mediaTypeOf = (parameter: Dict): string | undefined =>
 const isFormMediaType = (mt: string) => /^application\/x-www-form-urlencoded\b/i.test(mt);
 const isJsonMediaType = (mt: string) => /^application\/([\w.+-]+\+)?json\b/i.test(mt);
 
+const loadSourceDocuments = async (
+  root: ObjectElement,
+  textDocument: TextDocument,
+  provider: SourceDocumentProvider,
+  signal?: AbortSignal,
+  baseURI?: string,
+) => {
+  const sources = root.get('sourceDescriptions');
+  const declared = isArrayElement(sources)
+    ? ((sources as ArrayElement).content as Element[]).filter(isObjectEl)
+    : [];
+  const resolver = new Resolver(provider, textDocument.uri, signal, baseURI);
+  const loaded = new Map<string, LoadedSource>();
+  await Promise.all(
+    declared.map(async (source) => {
+      const name = str(source.get('name'));
+      const url = str(source.get('url'));
+      if (name === undefined || url === undefined) return;
+      const type = str(source.get('type'));
+      const doc = await resolver.loadSource(name, url, type);
+      if (doc) loaded.set(name, { name, type: detectType(doc.data, type), doc });
+    }),
+  );
+  return { declared, resolver, loaded };
+};
+
+export interface ArazzoSourceTarget {
+  source: string;
+  type: string;
+  id: string;
+  method?: string;
+  path?: string;
+  summary?: string;
+}
+
+export const getArazzoSourceTargets = async (
+  root: Element,
+  textDocument: TextDocument,
+  provider: SourceDocumentProvider,
+  baseURI?: string,
+): Promise<ArazzoSourceTarget[]> => {
+  if (!isObjectEl(root)) return [];
+  const { resolver, loaded } = await loadSourceDocuments(
+    root,
+    textDocument,
+    provider,
+    undefined,
+    baseURI,
+  );
+  const groups = await Promise.all(
+    [...loaded.values()].map(async (source) => {
+      if (source.type === 'arazzo') {
+        return [...workflowIds(source.doc.data)].map((id) => ({
+          source: source.name,
+          type: 'arazzo',
+          id,
+        }));
+      }
+      if (source.type !== 'openapi' && source.type !== 'asyncapi') return [];
+      const index = await indexOperations(resolver, source);
+      return [...index.ops].map(([id, entry]) => ({
+        source: source.name,
+        type: source.type!,
+        id,
+        method: entry.method,
+        path: entry.path,
+        summary: typeof entry.op.summary === 'string' ? entry.op.summary : undefined,
+      }));
+    }),
+  );
+  return groups.flat();
+};
+
 /**
  * Checks operationId / operationPath / channelPath / workflowId of the steps of an Arazzo document
  * against the Source Description documents supplied by the provider. Only sources that are loaded
@@ -323,29 +416,19 @@ export default async function arazzoSourceDiagnostics(
   textDocument: TextDocument,
   provider: SourceDocumentProvider,
   signal?: AbortSignal,
+  baseURI?: string,
 ): Promise<Diagnostic[]> {
   const root =
     api.element === 'parseResult' ? (api as unknown as { result?: Element }).result : api;
   if (!isObjectEl(root)) return [];
   const diagnostics: Diagnostic[] = [];
 
-  const sourcesEl = root.get('sourceDescriptions');
-  if (!isArrayElement(sourcesEl)) return [];
-  const declared = ((sourcesEl as ArrayElement).content as Element[]).filter(isObjectEl);
-
-  const resolver = new Resolver(provider, textDocument.uri, signal);
-
-  // load every source once; failures mean "not loaded"
-  const loaded = new Map<string, LoadedSource>();
-  await Promise.all(
-    declared.map(async (src) => {
-      const name = str(src.get('name'));
-      const url = str(src.get('url'));
-      if (name === undefined || url === undefined) return;
-      const type = str(src.get('type'));
-      const doc = await resolver.loadSource(name, url, type);
-      if (doc) loaded.set(name, { name, type: detectType(doc.data, type), doc });
-    }),
+  const { declared, resolver, loaded } = await loadSourceDocuments(
+    root,
+    textDocument,
+    provider,
+    signal,
+    baseURI,
   );
   if (loaded.size === 0) return [];
 

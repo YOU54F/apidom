@@ -6,6 +6,7 @@ import {
   isSelectorElement,
   isRequestBodyElement,
   isReferenceElement,
+  mediaTypes,
 } from '../../../src/index.ts';
 
 const doc = (arazzo: string | undefined) => ({
@@ -48,6 +49,15 @@ const isFixed = (obj: any, key: string) =>
 
 describe('refractor', function () {
   context('arazzo version gating', function () {
+    specify('should recognize 1.1.0 media types', function () {
+      expect(mediaTypes.findBy('1.1.0', 'json')).to.equal(
+        'application/vnd.oai.workflows+json;version=1.1.0',
+      );
+      expect(mediaTypes.findBy('1.1.0', 'yaml')).to.equal(
+        'application/vnd.oai.workflows+yaml;version=1.1.0',
+      );
+      expect(mediaTypes.latest()).to.equal('application/vnd.oai.workflows;version=1.1.0');
+    });
     specify('should refract 1.1 fields as fixed fields in 1.1.0', function () {
       const el: any = ArazzoSpecification1Element.refract(doc('1.1.0'));
 
