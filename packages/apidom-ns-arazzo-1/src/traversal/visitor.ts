@@ -27,6 +27,10 @@ export const keyMap = {
   ComponentsElement: ['content'],
   CriterionElement: ['content'],
   ReferenceElement: ['content'],
+  RequestBodyElement: ['content'],
+  PayloadReplacementElement: ['content'],
+  SelectorElement: ['content'],
+  ExpressionTypeElement: ['content'],
   JSONSchema202012Element: ['content'],
   ...keyMapBase,
 };

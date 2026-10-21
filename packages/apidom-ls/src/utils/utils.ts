@@ -12,6 +12,8 @@ import * as asyncapi3AdapterJson from '@swagger-api/apidom-parser-adapter-asynca
 import * as asyncapi3AdapterYaml from '@swagger-api/apidom-parser-adapter-asyncapi-yaml-3';
 import * as a2a1AdapterJson from '@swagger-api/apidom-parser-adapter-a2a-json-1';
 import * as a2a1AdapterYaml from '@swagger-api/apidom-parser-adapter-a2a-yaml-1';
+import * as arazzo1AdapterJson from '@swagger-api/apidom-parser-adapter-arazzo-json-1';
+import * as arazzo1AdapterYaml from '@swagger-api/apidom-parser-adapter-arazzo-yaml-1';
 import * as adsAdapterJson from '@swagger-api/apidom-parser-adapter-api-design-systems-json';
 import * as adsAdapterYaml from '@swagger-api/apidom-parser-adapter-api-design-systems-yaml';
 import * as adapterJson from '@swagger-api/apidom-parser-adapter-json';
@@ -223,15 +225,20 @@ export function localReferencePointers(
     }
   }
 
+  // Arazzo refracts JSON Schemas directly (workflow inputs), not through a 'schema' element.
+  const isNodeElement = (traversedNode: Element): boolean =>
+    traversedNode.element === nodeElement ||
+    (nodeElement === 'schema' && traversedNode.element === 'JSONSchema202012');
+
   // TODO check for reference-element class or type instead
   function findRefNodes(traversedNode: Element): void {
     if (includeRefs) {
       const isRef =
         nodeElement === toValue(traversedNode.getMetaProperty('referenced-element', ''));
-      if (isRef || traversedNode.element === nodeElement) {
+      if (isRef || isNodeElement(traversedNode)) {
         foundNodes.push({ element: traversedNode, isRef });
       }
-    } else if (traversedNode.element === nodeElement) {
+    } else if (isNodeElement(traversedNode)) {
       if (
         !(
           isObject(traversedNode) &&
@@ -976,6 +983,30 @@ export async function findNamespace(
     };
   }
 
+  if (await arazzo1AdapterJson.detect(text)) {
+    const groups = text.match(arazzo1AdapterJson.detectionRegExp)!.groups!;
+    const version = groups.version_json;
+
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'JSON',
+      mediaType: arazzo1AdapterJson.mediaTypes.findBy(version, 'json'),
+    };
+  }
+
+  if (await arazzo1AdapterYaml.detect(text)) {
+    const groups = text.match(arazzo1AdapterYaml.detectionRegExp)!.groups!;
+    const version = groups.version_json ?? groups.version_yaml;
+
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'YAML',
+      mediaType: arazzo1AdapterYaml.mediaTypes.findBy(version, 'yaml'),
+    };
+  }
+
   if (await a2a1AdapterJson.detect(text)) {
     // A2A AgentCard documents have no version discriminator field, so we
     // pin the LS namespace identification to A2A v1 (matches the registered
@@ -1022,6 +1053,45 @@ export async function findNamespace(
       namespace: 'ads',
       format: 'YAML',
       mediaType: adsAdapterYaml.mediaTypes.findBy(version, 'yaml'),
+    };
+  }
+
+  // Arazzo by shape: a top-level `arazzo` field next to `sourceDescriptions`/`workflows` whose value
+  // is not a 1.x.y version (missing quotes, `2.0.0`, `latest`, ...). The adapters' version-based
+  // detection above does not match these, but the author clearly wrote an Arazzo document, so
+  // it must still get Arazzo diagnostics (e.g. the unknown version warning).
+  const arazzoByShape = async (
+    adapter: typeof adapterJson | typeof adapterYaml,
+  ): Promise<boolean> => {
+    if (!text.includes('arazzo') || !(await adapter.detect(text))) return false;
+    try {
+      const parsed = await adapter.parse(text);
+      const root = parsed.result;
+      return (
+        isObjectElement(root) &&
+        root.hasKey('arazzo') &&
+        (root.hasKey('sourceDescriptions') || root.hasKey('workflows'))
+      );
+    } catch {
+      return false;
+    }
+  };
+  if (await arazzoByShape(adapterJson)) {
+    const version = '1.1.0';
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'JSON',
+      mediaType: arazzo1AdapterJson.mediaTypes.findBy(version, 'json'),
+    };
+  }
+  if (await arazzoByShape(adapterYaml)) {
+    const version = '1.1.0';
+    return {
+      namespace: 'arazzo',
+      version,
+      format: 'YAML',
+      mediaType: arazzo1AdapterYaml.mediaTypes.findBy(version, 'yaml'),
     };
   }
 

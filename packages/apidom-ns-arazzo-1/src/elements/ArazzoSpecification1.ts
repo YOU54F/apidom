@@ -1,4 +1,10 @@
-import { ObjectElement, ArrayElement, Attributes, Meta } from '@swagger-api/apidom-core';
+import {
+  ObjectElement,
+  ArrayElement,
+  Attributes,
+  Meta,
+  StringElement,
+} from '@swagger-api/apidom-core';
 
 import ArazzoSpecElement from './ArazzoSpec.ts';
 import InfoElement from './Info.ts';
@@ -53,6 +59,14 @@ class ArazzoSpecification1 extends ObjectElement {
 
   set components(components: ComponentsElement | undefined) {
     this.set('components', components);
+  }
+
+  get $self(): StringElement | undefined {
+    return this.get('$self');
+  }
+
+  set $self($self: StringElement | undefined) {
+    this.set('$self', $self);
   }
 }
 

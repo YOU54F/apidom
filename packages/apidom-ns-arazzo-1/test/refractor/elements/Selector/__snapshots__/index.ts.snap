@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`refractor elements SelectorElement should keep a string type as a string 1`] = `
+(SelectorElement
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement)))
+`;
+
+exports[`refractor elements SelectorElement should refract to semantic ApiDOM tree 1`] = `
+(SelectorElement
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (StringElement))
+  (MemberElement
+    (StringElement)
+    (ExpressionTypeElement
+      (MemberElement
+        (StringElement)
+        (StringElement))
+      (MemberElement
+        (StringElement)
+        (StringElement)))))
+`;

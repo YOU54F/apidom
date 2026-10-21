@@ -1,0 +1,32 @@
+arazzo: 1.0.1
+info:
+  title: Refs
+  version: 1.0.0
+sourceDescriptions:
+  - name: petstore
+    url: https://example.com/openapi.json
+  - name: petstore
+    url: https://example.com/other.json
+workflows:
+  - workflowId: one
+    steps:
+      - stepId: a
+        operationId: $sourceDescriptions.petstore.x
+        onSuccess:
+          - name: go
+            type: goto
+            stepId: missing
+      - stepId: a
+        workflowId: nope
+        onFailure:
+          - name: go2
+            type: goto
+            workflowId: two
+  - workflowId: one
+    steps:
+      - stepId: z
+        operationId: $sourceDescriptions.petstore.y
+        onSuccess:
+          - name: ok
+            type: goto
+            stepId: z

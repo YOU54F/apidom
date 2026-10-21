@@ -4,6 +4,9 @@ import {
   dereference,
   refract as baseRefract,
   dispatchRefractorPlugins,
+  isObjectElement,
+  isStringElement,
+  toValue,
 } from '@swagger-api/apidom-core';
 import { path } from 'ramda';
 
@@ -31,7 +34,9 @@ const refract = <T extends Element>(
    * Though we allow consumers to define their onw plugins on already transformed ApiDOM.
    */
   const RootVisitorClass = path(specPath, resolvedSpec) as typeof VisitorClass;
-  const rootVisitor = new RootVisitorClass({ specObj: resolvedSpec });
+  const versionElement = isObjectElement(element) ? element.get('arazzo') : undefined;
+  const specVersion = isStringElement(versionElement) ? toValue(versionElement) : undefined;
+  const rootVisitor = new RootVisitorClass({ specObj: resolvedSpec, specVersion });
 
   visit(element, rootVisitor);
 

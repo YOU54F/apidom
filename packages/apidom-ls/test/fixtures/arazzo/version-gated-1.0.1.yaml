@@ -1,0 +1,14 @@
+arazzo: 1.0.1
+$self: https://example.com/flow
+info:
+  title: Pet flow
+  version: 1.0.0
+sourceDescriptions:
+  - name: petstore
+    url: https://example.com/openapi.json
+workflows:
+  - workflowId: adopt
+    steps:
+      - stepId: find
+        operationId: a
+        timeout: 100

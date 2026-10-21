@@ -51,6 +51,7 @@ import {
   SourceMap,
 } from '../../utils/utils.ts';
 import { standardLinterfunctions } from './linter-functions.ts';
+import arazzoSourceDiagnostics from './arazzo-sources.ts';
 
 enum PerfLabels {
   START = 'doValidation',
@@ -986,6 +987,21 @@ export class DefaultValidationService implements ValidationService {
         }
       } catch (e) {
         console.log('error in retrieving jsonpath rules', e);
+      }
+      if (docNs === 'arazzo' && !hasSyntaxErrors && this.settings?.sourceDocuments) {
+        try {
+          diagnostics.push(
+            ...(await arazzoSourceDiagnostics(
+              api,
+              textDocument,
+              this.settings.sourceDocuments,
+              context?.signal,
+              this.settings.referenceOptions?.resolve?.baseURI,
+            )),
+          );
+        } catch (e) {
+          console.log('error in arazzo source checks', e);
+        }
       }
       perfEnd(PerfLabels.START);
       if (!hasSyntaxErrors) {

@@ -3,6 +3,8 @@ import { ArrayElement, Element, BREAK } from '@swagger-api/apidom-core';
 
 import StepOnFailureElement from '../../../../elements/nces/StepOnFailure.ts';
 import SpecificationVisitor, { SpecificationVisitorOptions } from '../../SpecificationVisitor.ts';
+import { isReferenceLikeElement } from '../../../predicates.ts';
+import { isReferenceElement } from '../../../../predicates.ts';
 import FallbackVisitor, { FallbackVisitorOptions } from '../../FallbackVisitor.ts';
 
 /**
@@ -25,8 +27,14 @@ class OnFailureVisitor extends Mixin(SpecificationVisitor, FallbackVisitor) {
 
   ArrayElement(arrayElement: ArrayElement) {
     arrayElement.forEach((item: Element): void => {
-      const specPath = ['document', 'objects', 'FailureAction'];
+      const specPath = isReferenceLikeElement(item)
+        ? ['document', 'objects', 'Reference']
+        : ['document', 'objects', 'FailureAction'];
       const element = this.toRefractedElement(specPath, item);
+
+      if (isReferenceElement(element)) {
+        element.setMetaProperty('referenced-element', 'failureAction');
+      }
 
       this.element.push(element);
     });

@@ -61,6 +61,7 @@ import {
   findNamespace,
 } from '../../utils/utils.ts';
 import { standardLinterfunctions } from '../validation/linter-functions.ts';
+import { arazzoCompletions } from '../arazzo-language.ts';
 
 export interface CompletionsCollector {
   add(suggestion: unknown): void;
@@ -862,6 +863,20 @@ export class DefaultCompletionService implements CompletionService {
       } else {
         //
       }
+    }
+
+    if (docNs === 'arazzo') {
+      completionList.items.push(
+        ...(await arazzoCompletions(
+          api,
+          completionNode,
+          textDocument,
+          position,
+          contentLanguage.format === 'JSON',
+          this.settings?.sourceDocuments,
+          this.settings?.referenceOptions?.resolve?.baseURI,
+        )),
+      );
     }
 
     if (this.jsonSchemaCompletionService) {

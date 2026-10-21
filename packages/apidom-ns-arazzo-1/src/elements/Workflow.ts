@@ -63,6 +63,38 @@ class Workflow extends ObjectElement {
   set outputs(outputs: ObjectElement | undefined) {
     this.set('outputs', outputs);
   }
+
+  get dependsOn(): ArrayElement | undefined {
+    return this.get('dependsOn');
+  }
+
+  set dependsOn(dependsOn: ArrayElement | undefined) {
+    this.set('dependsOn', dependsOn);
+  }
+
+  get parameters(): ArrayElement | undefined {
+    return this.get('parameters');
+  }
+
+  set parameters(parameters: ArrayElement | undefined) {
+    this.set('parameters', parameters);
+  }
+
+  get successActions(): ArrayElement | undefined {
+    return this.get('successActions');
+  }
+
+  set successActions(successActions: ArrayElement | undefined) {
+    this.set('successActions', successActions);
+  }
+
+  get failureActions(): ArrayElement | undefined {
+    return this.get('failureActions');
+  }
+
+  set failureActions(failureActions: ArrayElement | undefined) {
+    this.set('failureActions', failureActions);
+  }
 }
 
 export default Workflow;

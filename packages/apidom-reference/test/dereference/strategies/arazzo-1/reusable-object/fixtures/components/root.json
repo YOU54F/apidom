@@ -1,0 +1,25 @@
+{
+  "arazzo": "1.0.1",
+  "info": { "title": "t", "version": "1" },
+  "sourceDescriptions": [{ "name": "api", "url": "./api.json", "type": "openapi" }],
+  "workflows": [
+    {
+      "workflowId": "w",
+      "parameters": [
+        { "reference": "$components.parameters.token", "value": "override" },
+        { "reference": "$components.parameters.token" }
+      ],
+      "steps": [
+        {
+          "stepId": "s",
+          "operationId": "op",
+          "onSuccess": [{ "reference": "$components.successActions.done" }]
+        }
+      ]
+    }
+  ],
+  "components": {
+    "parameters": { "token": { "name": "token", "in": "header", "value": "orig" } },
+    "successActions": { "done": { "name": "done", "type": "end" } }
+  }
+}

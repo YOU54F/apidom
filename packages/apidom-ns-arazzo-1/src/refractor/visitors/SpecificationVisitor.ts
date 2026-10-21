@@ -13,6 +13,8 @@ import type specification from '../specification.ts';
  */
 export interface SpecificationVisitorOptions extends VisitorOptions {
   readonly specObj: typeof specification;
+  /** Root `arazzo` version, used to gate fields introduced after 1.0. */
+  readonly specVersion?: string;
 }
 
 /**
@@ -21,7 +23,9 @@ export interface SpecificationVisitorOptions extends VisitorOptions {
 class SpecificationVisitor extends Visitor {
   protected readonly specObj: typeof specification;
 
-  protected readonly passingOptionsNames = ['specObj'];
+  protected readonly specVersion?: string;
+
+  protected readonly passingOptionsNames = ['specObj', 'specVersion'];
 
   constructor({ specObj, ...rest }: SpecificationVisitorOptions) {
     super({ ...rest });

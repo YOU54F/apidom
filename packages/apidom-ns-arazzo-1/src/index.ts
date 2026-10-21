@@ -190,6 +190,19 @@ export {
   isCriterionElement,
   isReferenceElement,
   isJSONSchemaElement,
+  isRequestBodyElement,
+  isPayloadReplacementElement,
+  isSelectorElement,
+  isExpressionTypeElement,
+  isWorkflowDependsOnElement,
+  isWorkflowParametersElement,
+  isWorkflowSuccessActionsElement,
+  isWorkflowFailureActionsElement,
+  isComponentsSuccessActionsElement,
+  isComponentsFailureActionsElement,
+  isRequestBodyReplacementsElement,
+  isSuccessActionParametersElement,
+  isFailureActionParametersElement,
 } from './predicates.ts';
 
 export { isArazzoSpecificationExtension } from './refractor/predicates.ts';
@@ -210,6 +223,10 @@ export {
   ComponentsElement,
   CriterionElement,
   ReferenceElement,
+  RequestBodyElement,
+  PayloadReplacementElement,
+  SelectorElement,
+  ExpressionTypeElement,
   JSONSchemaElement,
 } from './refractor/registration.ts';
 // NCE types
@@ -227,3 +244,12 @@ export { default as SuccessActionCriteriaElement } from './elements/nces/Success
 export { default as FailureActionCriteriaElement } from './elements/nces/FailureActionCriteria.ts';
 export { default as ComponentsSchemas } from './elements/nces/ComponentsInputs.ts';
 export { default as ComponentsParameters } from './elements/nces/ComponentsParameters.ts';
+export { default as WorkflowDependsOnElement } from './elements/nces/WorkflowDependsOn.ts';
+export { default as WorkflowParametersElement } from './elements/nces/WorkflowParameters.ts';
+export { default as WorkflowSuccessActionsElement } from './elements/nces/WorkflowSuccessActions.ts';
+export { default as WorkflowFailureActionsElement } from './elements/nces/WorkflowFailureActions.ts';
+export { default as ComponentsSuccessActionsElement } from './elements/nces/ComponentsSuccessActions.ts';
+export { default as ComponentsFailureActionsElement } from './elements/nces/ComponentsFailureActions.ts';
+export { default as RequestBodyReplacementsElement } from './elements/nces/RequestBodyReplacements.ts';
+export { default as SuccessActionParametersElement } from './elements/nces/SuccessActionParameters.ts';
+export { default as FailureActionParametersElement } from './elements/nces/FailureActionParameters.ts';

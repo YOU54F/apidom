@@ -2,6 +2,7 @@ import configAsyncAPI from './asyncapi/config.ts';
 import configOpenAPI from './openapi/config.ts';
 import configADS from './ads/config.ts';
 import configA2A from './a2a/config.ts';
+import configArazzo from './arazzo/config.ts';
 import configJSONSchema202012 from './json-schema/2020-12/config.ts';
 import asyncapiReferenceMeta from './asyncapi/reference/meta.ts';
 import openapiReferenceMeta from './openapi/reference/meta.ts';
@@ -20,6 +21,7 @@ export function config(): Metadata {
       asyncapi: configAsyncAPI,
       ads: configADS,
       a2a: configA2A,
+      arazzo: configArazzo,
       'json-schema-2020-12': configJSONSchema202012,
     },
     rules: {

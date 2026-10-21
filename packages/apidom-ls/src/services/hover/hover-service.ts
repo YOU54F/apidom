@@ -33,6 +33,7 @@ import {
   findNamespace,
   debug,
 } from '../../utils/utils.ts';
+import { arazzoHover } from '../arazzo-language.ts';
 
 const CONTROL_CODES = '\\u0000-\\u0020\\u007f-\\u009f';
 const WEB_LINK_REGEX = new RegExp(
@@ -297,6 +298,16 @@ export class DefaultHoverService implements HoverService {
             // TODO no ctrl-click on link
           }
         }
+      }
+      if (docNs === 'arazzo') {
+        const targetDocs = await arazzoHover(
+          api,
+          node,
+          textDocument,
+          this.settings?.sourceDocuments,
+          this.settings?.referenceOptions?.resolve?.baseURI,
+        );
+        if (targetDocs) contents.push(targetDocs);
       }
       try {
         for (const provider of this.hoverProviders) {

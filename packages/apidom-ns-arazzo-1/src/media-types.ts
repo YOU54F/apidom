@@ -40,6 +40,9 @@ const mediaTypes = new ArazzoMediaTypes(
   'application/vnd.oai.workflows;version=1.0.1',
   'application/vnd.oai.workflows+json;version=1.0.1',
   'application/vnd.oai.workflows+yaml;version=1.0.1',
+  'application/vnd.oai.workflows;version=1.1.0',
+  'application/vnd.oai.workflows+json;version=1.1.0',
+  'application/vnd.oai.workflows+yaml;version=1.1.0',
 );
 
 export default mediaTypes;

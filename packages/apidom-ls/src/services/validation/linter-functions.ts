@@ -37,7 +37,13 @@ import {
 import { FunctionItem } from '../../apidom-language-types.ts';
 
 const root = (el: Element): Element => {
-  const rootElementTypes = ['swagger', 'openApi3_0', 'openApi3_1', 'asyncApi2'];
+  const rootElementTypes = [
+    'swagger',
+    'openApi3_0',
+    'openApi3_1',
+    'asyncApi2',
+    'arazzoSpecification1',
+  ];
   let node = el;
 
   while (node.parent && !rootElementTypes.includes(node.parent.element)) {
@@ -130,6 +136,208 @@ const isType = (element: Element, elementType: string): boolean => {
     //
   }
   return true;
+};
+
+const enclosingArazzoWorkflow = (element: Element): Element | undefined => {
+  let current: Element | undefined = element.parent as Element | undefined;
+  while (current && current.element !== 'workflow') {
+    current = current.parent as Element | undefined;
+  }
+  return current;
+};
+
+const arazzoStepIds = (workflow: Element): unknown[] => {
+  const steps = (workflow as ObjectElement).get('steps');
+  if (!isArray(steps)) return [];
+  return ((steps as ArrayElement).content as Element[])
+    .filter((step) => isObject(step) && (step as ObjectElement).hasKey('stepId'))
+    .map((step) => toValue((step as ObjectElement).get('stepId')));
+};
+
+const enclosingArazzoElement = (element: Element, name: string): Element | undefined => {
+  let current: Element | undefined = element.parent as Element | undefined;
+  while (current && current.element !== name) {
+    current = current.parent as Element | undefined;
+  }
+  return current;
+};
+
+const arazzoNamesOf = (api: Element | undefined, key: string, idField: string): string[] => {
+  if (!api || !isObject(api)) return [];
+  const list = api.get(key);
+  if (!isArray(list)) return [];
+  return ((list as ArrayElement).content as Element[])
+    .filter((item) => isObject(item) && (item as ObjectElement).hasKey(idField))
+    .map((item) => toValue((item as ObjectElement).get(idField)) as string);
+};
+
+const arazzoWorkflowIds = (api: Element | undefined): string[] =>
+  arazzoNamesOf(api, 'workflows', 'workflowId');
+
+const arazzoSourceDescriptionNames = (api: Element | undefined): string[] =>
+  arazzoNamesOf(api, 'sourceDescriptions', 'name');
+
+const arazzoStepOutputNames = (workflow: Element, stepId: string): string[] => {
+  const steps = (workflow as ObjectElement).get('steps');
+  if (!isArray(steps)) return [];
+  const step = ((steps as ArrayElement).content as Element[]).find(
+    (s) => isObject(s) && toValue((s as ObjectElement).get('stepId')) === stepId,
+  );
+  const outputs = isObject(step as Element) ? (step as ObjectElement).get('outputs') : undefined;
+  return isObject(outputs) ? (outputs.keys() as string[]) : [];
+};
+
+const arazzoExpressionTypeVersions: Record<string, string[]> = {
+  jsonpath: ['draft-goessner-dispatch-jsonpath-00'],
+  xpath: ['xpath-30', 'xpath-20', 'xpath-10'],
+};
+
+interface ArazzoExpressionRef {
+  name: string;
+  kind?: string;
+  output?: string;
+  workflow?: Element;
+  workflowStepIds: unknown[];
+}
+
+const collectStrings = (value: unknown, out: string[]): string[] => {
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) value.forEach((v) => collectStrings(v, out));
+  else if (value !== null && typeof value === 'object') {
+    Object.values(value as Record<string, unknown>).forEach((v) => collectStrings(v, out));
+  }
+  return out;
+};
+
+const arazzoExpressionPattern =
+  /\$(steps|workflows|sourceDescriptions|components|inputs)\.([A-Za-z0-9_.-]+)/g;
+
+/**
+ * Extracts the references of one kind (`steps`, `workflows`, ...) made by the runtime
+ * expressions found in the strings of an element. A string is an expression when it starts
+ * with `$` or when it embeds `{$...}`; free text inside a `condition` is scanned for tokens.
+ */
+/**
+ * Strings of an element that are runtime expressions (or, within a `condition`, scanned text).
+ */
+const arazzoExpressionCandidates = (element: Element): string[] => {
+  const isCondition =
+    element.parent &&
+    isMember(element.parent) &&
+    toValue(element.parent.key as Element) === 'condition';
+  const candidates: string[] = [];
+  for (const text of collectStrings(toValue(element), [])) {
+    if (isCondition) candidates.push(text);
+    else {
+      if (text.startsWith('$')) candidates.push(text);
+      for (const m of text.matchAll(/\{(\$[^}]*)\}/g)) candidates.push(m[1]);
+    }
+  }
+  return candidates;
+};
+
+const KNOWN_ARAZZO_VERSIONS = ['1.0.0', '1.0.1', '1.1.0'];
+
+const arazzoSourceDescriptionOf = (step: Element): Element | undefined => {
+  const api = root(step);
+  if (!api || !isObject(api)) return undefined;
+  const list = api.get('sourceDescriptions');
+  if (!isArray(list)) return undefined;
+  const sources = ((list as ArrayElement).content as Element[]).filter((i) => isObject(i));
+  let name: string | undefined;
+  const operationId = toValue((step as ObjectElement).get('operationId'));
+  const operationPath = toValue((step as ObjectElement).get('operationPath'));
+  const fromExpression =
+    typeof operationId === 'string'
+      ? /^\$sourceDescriptions\.([^.]+)\./.exec(operationId)
+      : typeof operationPath === 'string'
+        ? /^\{\$sourceDescriptions\.([^.}]+)\.url\}/.exec(operationPath)
+        : null;
+  if (fromExpression) [, name] = fromExpression;
+  else if (typeof operationId === 'string' && sources.length === 1) {
+    return sources[0];
+  } else if (typeof operationPath === 'string' && sources.length === 1) {
+    return sources[0];
+  }
+  if (name === undefined) return undefined;
+  return sources.find((src) => toValue((src as ObjectElement).get('name')) === name);
+};
+
+/**
+ * Kind of target a step addresses, from what the document declares:
+ * `workflow`, or the declared `type` of the Source Description (`openapi`, `asyncapi`, `arazzo`).
+ * Undefined when it cannot be told.
+ */
+const arazzoStepTargetKind = (step: Element): string | undefined => {
+  if (!isObject(step)) return undefined;
+  if (step.hasKey('workflowId')) return 'workflow';
+  if (step.hasKey('channelPath')) return 'asyncapi';
+  const source = arazzoSourceDescriptionOf(step);
+  const type = source ? toValue((source as ObjectElement).get('type')) : undefined;
+  return typeof type === 'string' ? type : undefined;
+};
+
+const arazzoExpressionRefs = (element: Element, kind: string): ArazzoExpressionRef[] => {
+  const workflow = enclosingArazzoWorkflow(element);
+  const workflowStepIds = workflow && isObject(workflow) ? arazzoStepIds(workflow) : [];
+  const refs: ArazzoExpressionRef[] = [];
+  for (const candidate of arazzoExpressionCandidates(element)) {
+    for (const m of candidate.matchAll(arazzoExpressionPattern)) {
+      if (m[1] === kind) {
+        const segments = m[2].replace(/\.$/, '');
+        if (kind === 'steps') {
+          const [name, ...rest] = segments.split('.');
+          const outputs =
+            rest[0] === 'outputs' && rest.length > 1 ? rest.slice(1).join('.') : undefined;
+          refs.push({ name, output: outputs, workflow, workflowStepIds });
+        } else if (kind === 'components') {
+          const [group, ...rest] = segments.split('.');
+          if (rest.length > 0) refs.push({ kind: group, name: rest.join('.'), workflowStepIds });
+        } else if (kind === 'inputs') {
+          refs.push({ name: segments.split('.')[0], workflowStepIds });
+        } else {
+          refs.push({ name: segments.split('.')[0], workflowStepIds });
+        }
+      }
+    }
+  }
+  return refs;
+};
+
+/**
+ * An object that looks like a Selector Object (only `context`, `selector`, `type` and
+ * extensions) but lacks `context` or `selector`; it is not refracted to a Selector element.
+ */
+const arazzoSelectorIncomplete = (element: Element): boolean => {
+  if (!isObject(element) || element.element === 'selector') return false;
+  const keys = element.keys() as unknown[];
+  if (!keys.every((k) => typeof k === 'string')) return false;
+  if (
+    !(keys as string[]).every(
+      (k) => ['context', 'selector', 'type'].includes(k) || k.startsWith('x-'),
+    )
+  ) {
+    return false;
+  }
+  return element.hasKey('context') !== element.hasKey('selector');
+};
+
+const isXmlMediaType = (mediaType: unknown): boolean =>
+  typeof mediaType === 'string' && /^(application|text)\/([\w.-]+\+)?xml\b/i.test(mediaType.trim());
+
+/**
+ * Infer `xpath` only for a known XML context, not from an unrelated destination payload.
+ */
+const arazzoInferredSelectorType = (selector: Element): string | undefined => {
+  if (!isObject(selector)) return undefined;
+  const context = toValue(selector.get('context'));
+  if (isXmlMediaType(context)) return 'xpath';
+  if (context !== '$request.body') return undefined;
+  const requestBody = enclosingArazzoElement(selector, 'requestBody');
+  if (requestBody && isObject(requestBody)) {
+    if (isXmlMediaType(toValue(requestBody.get('contentType')))) return 'xpath';
+  }
+  return undefined;
 };
 
 // eslint-disable-next-line import/prefer-default-export
@@ -1052,9 +1260,10 @@ export const standardLinterfunctions: FunctionItem[] = [
 
             if (
               (elementOrClasses.includes(el.element) ||
-                classes.filter((classElement: Element) =>
-                  elementOrClasses.includes(toValue(classElement)),
-                ).length === classes.length) &&
+                (classes.length > 0 &&
+                  classes.filter((classElement: Element) =>
+                    elementOrClasses.includes(toValue(classElement)),
+                  ).length === classes.length)) &&
               isObject(el) &&
               el.hasKey(key)
             ) {
@@ -1133,6 +1342,316 @@ export const standardLinterfunctions: FunctionItem[] = [
       }
 
       return !containerCache.get(cacheKey)!.has(value);
+    },
+  },
+  {
+    functionName: 'arazzoWorkflowExists',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      // runtime expressions and non-strings are not workflow ids
+      if (typeof value !== 'string' || value.startsWith('$')) return true;
+      const api = root(element);
+      if (!api) return true;
+      const ids: unknown[] = [];
+      traverse((el: Element) => {
+        if (el.element === 'workflow' && isObject(el) && el.hasKey('workflowId')) {
+          ids.push(toValue(el.get('workflowId')));
+        }
+      }, api);
+      return ids.length === 0 || ids.includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoStepExists',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      if (typeof value !== 'string' || value.startsWith('$')) return true;
+      const workflow = enclosingArazzoWorkflow(element);
+      // actions under components are not bound to a workflow
+      if (!workflow || !isObject(workflow) || !isArray(workflow.get('steps'))) return true;
+      return arazzoStepIds(workflow).includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoStepIdUnique',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      const workflow = enclosingArazzoWorkflow(element);
+      if (!workflow || !isObject(workflow)) return true;
+      return arazzoStepIds(workflow).filter((id) => id === value).length < 2;
+    },
+  },
+  {
+    functionName: 'arazzoExpressionStepExists',
+    function: (element: Element): boolean =>
+      arazzoExpressionRefs(element, 'steps').every(
+        (ref) => !ref.workflow || ref.workflowStepIds.includes(ref.name),
+      ),
+  },
+  {
+    functionName: 'arazzoExpressionStepOutputDeclared',
+    function: (element: Element): boolean =>
+      arazzoExpressionRefs(element, 'steps').every((ref) => {
+        if (!ref.workflow || !ref.workflowStepIds.includes(ref.name) || ref.output === undefined) {
+          return true;
+        }
+        const declared = arazzoStepOutputNames(ref.workflow, ref.name);
+        return declared.some((d) => ref.output === d || ref.output?.startsWith(`${d}.`));
+      }),
+  },
+  {
+    functionName: 'arazzoExpressionWorkflowExists',
+    function: (element: Element): boolean => {
+      const ids = arazzoWorkflowIds(root(element));
+      return (
+        ids.length === 0 ||
+        arazzoExpressionRefs(element, 'workflows').every((ref) => ids.includes(ref.name))
+      );
+    },
+  },
+  {
+    functionName: 'arazzoExpressionSourceDescriptionExists',
+    function: (element: Element): boolean => {
+      const names = arazzoSourceDescriptionNames(root(element));
+      return (
+        names.length === 0 ||
+        arazzoExpressionRefs(element, 'sourceDescriptions').every((ref) => names.includes(ref.name))
+      );
+    },
+  },
+  {
+    functionName: 'arazzoExpressionComponentExists',
+    function: (element: Element): boolean => {
+      const api = root(element);
+      if (!api || !isObject(api)) return true;
+      return arazzoExpressionRefs(element, 'components').every((ref) => {
+        const components = api.get('components');
+        const group = isObject(components) ? components.get(ref.kind as string) : undefined;
+        return isObject(group) && group.hasKey(ref.name);
+      });
+    },
+  },
+  {
+    functionName: 'arazzoExpressionInputDeclared',
+    function: (element: Element): boolean => {
+      const workflow = enclosingArazzoWorkflow(element);
+      if (!workflow || !isObject(workflow)) return true;
+      const inputs = workflow.get('inputs');
+      const properties = isObject(inputs) ? inputs.get('properties') : undefined;
+      if (!isObject(properties)) return true;
+      const names = properties.keys() as string[];
+      return arazzoExpressionRefs(element, 'inputs').every((ref) => names.includes(ref.name));
+    },
+  },
+  {
+    functionName: 'arazzoExactlyOneOf',
+    function: (element: Element, keys: string[]): boolean =>
+      !isObject(element) || keys.filter((k) => element.hasKey(k)).length === 1,
+  },
+  {
+    functionName: 'arazzoParameterInRequired',
+    function: (element: Element): boolean => {
+      if (!isObject(element) || element.hasKey('in')) return true;
+      const step = enclosingArazzoElement(element, 'step') as Element;
+      return !isObject(step) || !(step.hasKey('operationId') || step.hasKey('operationPath'));
+    },
+  },
+  {
+    functionName: 'arazzoCriterionContextRequired',
+    // target: `type`
+    function: (element: Element): boolean => {
+      const criterion = element.parent?.parent;
+      return !isObject(criterion) || criterion.hasKey('context');
+    },
+  },
+  {
+    functionName: 'arazzoCriterionTypeValid',
+    function: (element: Element): boolean => {
+      if (isObject(element)) return true;
+      const value = toValue(element);
+      return typeof value === 'string' && ['simple', 'regex', 'jsonpath', 'xpath'].includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoSelectorTypePresent',
+    function: (element: Element): boolean =>
+      !isObject(element) ||
+      element.hasKey('type') ||
+      arazzoInferredSelectorType(element) !== undefined,
+  },
+  {
+    functionName: 'arazzoSelectorTypeValid',
+    function: (element: Element): boolean => {
+      if (isObject(element)) return true;
+      const value = toValue(element);
+      return typeof value === 'string' && ['jsonpointer', 'jsonpath', 'xpath'].includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoExpressionTypeTypeValid',
+    function: (element: Element, types: string[] = ['jsonpath', 'xpath']): boolean => {
+      const value = toValue(element);
+      return typeof value !== 'string' || types.includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoExpressionTypeVersionValid',
+    // target: `version`
+    function: (element: Element, versions?: Record<string, string[]>): boolean => {
+      const expressionType = element.parent?.parent;
+      const version = toValue(element);
+      if (!isObject(expressionType) || typeof version !== 'string') return true;
+      const type = toValue(expressionType.get('type'));
+      const table = versions ?? arazzoExpressionTypeVersions;
+      const allowed = typeof type === 'string' ? table[type] : undefined;
+      return !allowed || allowed.includes(version);
+    },
+  },
+  {
+    functionName: 'arazzoActionGotoTarget',
+    function: (element: Element): boolean =>
+      !isObject(element) ||
+      toValue(element.get('type')) !== 'goto' ||
+      element.hasKey('stepId') ||
+      element.hasKey('workflowId'),
+  },
+  {
+    functionName: 'arazzoActionTargetExclusive',
+    function: (element: Element): boolean =>
+      !isObject(element) || !(element.hasKey('stepId') && element.hasKey('workflowId')),
+  },
+  {
+    functionName: 'arazzoActionEndNoTarget',
+    function: (element: Element): boolean =>
+      !isObject(element) ||
+      toValue(element.get('type')) !== 'end' ||
+      !(element.hasKey('stepId') || element.hasKey('workflowId')),
+  },
+  {
+    functionName: 'arazzoRetryFieldsOnlyForRetry',
+    function: (element: Element): boolean =>
+      !isObject(element) ||
+      !(element.hasKey('retryAfter') || element.hasKey('retryLimit')) ||
+      !element.hasKey('type') ||
+      toValue(element.get('type')) === 'retry',
+  },
+  {
+    functionName: 'arazzoNonNegativeNumber',
+    function: (element: Element, integer?: boolean): boolean => {
+      const value = toValue(element);
+      if (typeof value !== 'number') return true;
+      return value >= 0 && (!integer || Number.isInteger(value));
+    },
+  },
+  {
+    functionName: 'arazzoListUnique',
+    function: (element: Element, fields: string[]): boolean => {
+      if (!isArray(element)) return true;
+      const seen = new Set<string>();
+      for (const item of (element as ArrayElement).content as Element[]) {
+        if (isObject(item)) {
+          const identity = item.hasKey('reference')
+            ? `ref:${toValue(item.get('reference'))}`
+            : fields.every((f) => item.hasKey(f))
+              ? JSON.stringify(fields.map((f) => toValue(item.get(f))))
+              : undefined;
+          if (identity !== undefined) {
+            if (seen.has(identity)) return false;
+            seen.add(identity);
+          }
+        }
+      }
+      return true;
+    },
+  },
+  {
+    functionName: 'arazzoOutputsValues',
+    function: (element: Element, allowSelector: boolean): boolean => {
+      if (!isObject(element)) return true;
+      return (element.content as MemberElement[]).every((member) => {
+        const value = member.value as Element;
+        return (
+          typeof toValue(value) === 'string' ||
+          (allowSelector && (value.element === 'selector' || arazzoSelectorIncomplete(value)))
+        );
+      });
+    },
+  },
+  {
+    functionName: 'arazzoSelectorIncomplete',
+    // `container`: the element is an object whose members may be Selector Objects (`outputs`)
+    function: (element: Element, container?: boolean): boolean => {
+      if (container) {
+        return (
+          !isObject(element) ||
+          (element.content as MemberElement[]).every(
+            (member) => !arazzoSelectorIncomplete(member.value as Element),
+          )
+        );
+      }
+      return !arazzoSelectorIncomplete(element);
+    },
+  },
+  {
+    functionName: 'arazzoKnownVersion',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      // a non-string (e.g. YAML `1.0`) is not a version string, so it is not a known version
+      return typeof value === 'string' && KNOWN_ARAZZO_VERSIONS.includes(value);
+    },
+  },
+  {
+    functionName: 'arazzoExpressionAvailableFrom11',
+    function: (element: Element): boolean =>
+      !arazzoExpressionCandidates(element).some((candidate) =>
+        /\$(self\b|message\.)/.test(candidate),
+      ),
+  },
+  {
+    functionName: 'arazzoStepActionApplicable',
+    function: (element: Element): boolean => {
+      if (!isObject(element) || !element.hasKey('action')) return true;
+      return !['workflow', 'openapi', 'arazzo'].includes(arazzoStepTargetKind(element) ?? '');
+    },
+  },
+  {
+    functionName: 'arazzoStepCorrelationIdApplicable',
+    function: (element: Element): boolean => {
+      if (!isObject(element) || !element.hasKey('correlationId')) return true;
+      if (toValue(element.get('action')) === 'send') return false;
+      return !['workflow', 'openapi', 'arazzo'].includes(arazzoStepTargetKind(element) ?? '');
+    },
+  },
+  {
+    functionName: 'arazzoDependsOnValid',
+    function: (element: Element): boolean => {
+      if (!isArray(element)) return true;
+      const ids = arazzoWorkflowIds(root(element));
+      return ((element as ArrayElement).content as Element[]).every((item) => {
+        const value = toValue(item);
+        if (typeof value !== 'string') return false;
+        return value.startsWith('$') || ids.length === 0 || ids.includes(value);
+      });
+    },
+  },
+  {
+    functionName: 'arazzoParameterValueType',
+    // target: `value`
+    function: (element: Element): boolean => {
+      const parameter = element.parent?.parent;
+      if (!isObject(parameter)) return true;
+      const location = toValue(parameter.get('in'));
+      if (['path', 'header', 'cookie'].includes(location)) {
+        return !(isObject(element) || isArray(element));
+      }
+      return true;
+    },
+  },
+  {
+    functionName: 'arazzoPayloadType',
+    function: (element: Element): boolean => {
+      const value = toValue(element);
+      return value !== null && typeof value !== 'number' && typeof value !== 'boolean';
     },
   },
   {

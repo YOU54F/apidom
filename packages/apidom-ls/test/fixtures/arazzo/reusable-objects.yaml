@@ -1,0 +1,62 @@
+arazzo: 1.0.1
+info:
+  title: Reusable objects
+  version: 1.0.0
+sourceDescriptions:
+  - name: api
+    url: https://example.com/openapi.yaml
+    type: openapi
+workflows:
+  - workflowId: find
+    inputs:
+      $ref: '#/components/inputs/find_input'
+    steps:
+      - stepId: list
+        operationId: listPets
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - reference: $components.parameters.page
+            value: 1
+          - reference: $components.parameters.pageSize
+        onSuccess:
+          - reference: $components.successActions.done
+        onFailure:
+          - reference: $components.failureActions.retryOnce
+          - name: again
+            type: goto
+            stepId: list
+      - stepId: order
+        workflowId: place-order
+  - workflowId: place-order
+    steps:
+      - stepId: place
+        operationId: placeOrder
+components:
+  inputs:
+    find_input:
+      type: object
+      properties:
+        store:
+          $ref: '#/components/inputs/store'
+    store:
+      type: string
+  parameters:
+    page:
+      name: page
+      in: query
+      value: 1
+    pageSize:
+      name: pageSize
+      in: query
+      value: 100
+  successActions:
+    done:
+      name: done
+      type: end
+  failureActions:
+    retryOnce:
+      name: retryOnce
+      type: retry
+      retryLimit: 1

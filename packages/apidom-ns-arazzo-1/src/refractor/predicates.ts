@@ -8,7 +8,7 @@ import {
 } from '@swagger-api/apidom-core';
 
 export interface ReferenceLikeElement extends ObjectElement {
-  hasKey: (value: '$ref') => true;
+  hasKey: (value: 'reference' | '$ref') => true;
 }
 
 /**
@@ -19,5 +19,5 @@ export const isArazzoSpecificationExtension = (element: MemberElement): boolean 
 };
 
 export const isReferenceLikeElement = (element: unknown): element is ReferenceLikeElement => {
-  return isObjectElement(element) && element.hasKey('$ref');
+  return isObjectElement(element) && (element.hasKey('reference') || element.hasKey('$ref'));
 };

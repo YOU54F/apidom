@@ -4,6 +4,7 @@ import {
   StringElement,
   Attributes,
   Meta,
+  NumberElement,
 } from '@swagger-api/apidom-core';
 
 /**
@@ -101,6 +102,54 @@ class Step extends ObjectElement {
 
   set outputs(outputs: ObjectElement | undefined) {
     this.set('outputs', outputs);
+  }
+
+  get operationPath(): StringElement | undefined {
+    return this.get('operationPath');
+  }
+
+  set operationPath(operationPath: StringElement | undefined) {
+    this.set('operationPath', operationPath);
+  }
+
+  get channelPath(): StringElement | undefined {
+    return this.get('channelPath');
+  }
+
+  set channelPath(channelPath: StringElement | undefined) {
+    this.set('channelPath', channelPath);
+  }
+
+  get requestBody(): ObjectElement | undefined {
+    return this.get('requestBody');
+  }
+
+  set requestBody(requestBody: ObjectElement | undefined) {
+    this.set('requestBody', requestBody);
+  }
+
+  get timeout(): NumberElement | undefined {
+    return this.get('timeout');
+  }
+
+  set timeout(timeout: NumberElement | undefined) {
+    this.set('timeout', timeout);
+  }
+
+  get correlationId(): StringElement | undefined {
+    return this.get('correlationId');
+  }
+
+  set correlationId(correlationId: StringElement | undefined) {
+    this.set('correlationId', correlationId);
+  }
+
+  get action(): StringElement | undefined {
+    return this.get('action');
+  }
+
+  set action(action: StringElement | undefined) {
+    this.set('action', action);
   }
 }
 
